@@ -1,0 +1,13 @@
+<div class="toast-container">
+  @for (toast of notificationService.messages(); track toast.id) {
+    <div class="toast-item" [ngClass]="'toast-' + toast.type">
+      <div class="toast-content">
+        @if (toast.title) {
+          <strong class="toast-title">{{ toast.title }}</strong>
+        }
+        <span class="toast-message">{{ toast.message }}</span>
+      </div>
+      <button class="toast-close" (click)="notificationService.remove(toast.id)">&times;</button>
+    </div>
+  }
+</div>

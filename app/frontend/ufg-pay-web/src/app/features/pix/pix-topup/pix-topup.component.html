@@ -1,0 +1,69 @@
+<div class="pix-container container">
+  <div class="pix-card card">
+    <div class="pix-header">
+      <div class="pix-badge">PIX Instantâneo</div>
+      <h2>Recarga de Saldo</h2>
+      <p>O saldo é creditado imediatamente em sua carteira digital UFG Pay.</p>
+    </div>
+
+    <form [formGroup]="topupForm" (ngSubmit)="onSubmit()" class="pix-form">
+      <div class="form-group">
+        <label for="valorReais">Valor da Recarga (R$)</label>
+        <div class="input-currency-wrapper">
+          <span class="currency-prefix">R$</span>
+          <input 
+            id="valorReais" 
+            type="number" 
+            step="0.01" 
+            class="form-control currency-input" 
+            formControlName="valorReais"
+          />
+        </div>
+      </div>
+
+      <div class="quick-values">
+        <span class="quick-label">Valores rápidos:</span>
+        <div class="quick-buttons">
+          @for (val of quickValues; track val) {
+            <button 
+              type="button" 
+              class="btn btn-outline btn-quick"
+              [class.active]="topupForm.get('valorReais')?.value === val"
+              (click)="selectQuickValue(val)"
+            >
+              R$ {{ val }},00
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- Exibição do QR Code PIX Real -->
+      <div class="pix-qr-section">
+        <span class="qr-heading">Escaneie o QR Code no seu aplicativo bancário:</span>
+        <div class="qr-box">
+          <img [src]="qrCodePixUrl()" alt="QR Code PIX Banco Central" class="pix-qr-image" />
+        </div>
+
+        <button type="button" class="btn btn-outline btn-copy-pix" (click)="onCopyPix()">
+          @if (copied()) {
+            <span>✓ Código PIX Copiado!</span>
+          } @else {
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            <span>Copiar Código Pix Copia e Cola</span>
+          }
+        </button>
+      </div>
+
+      <button type="submit" class="btn btn-accent btn-block" [disabled]="isProcessing()">
+        @if (isProcessing()) {
+          <span>Confirmando pagamento...</span>
+        } @else {
+          <span>Simular Pagamento Instantâneo</span>
+        }
+      </button>
+    </form>
+  </div>
+</div>

@@ -1,0 +1,30 @@
+<div class="campus-container container">
+  <div class="page-header">
+    <div class="header-content">
+      <h2>Catálogo de Serviços do Campus</h2>
+      <p>Compre refeições no RU, impressões na Reprografia e lanches com desconto e débito direto em conta.</p>
+    </div>
+  </div>
+
+  @if (campusService.isLoading()) {
+    <div class="loading-state">Carregando catálogo de serviços...</div>
+  } @else {
+    <div class="services-grid">
+      @for (item of campusService.services(); track item.id) {
+        <app-service-item
+          [item]="item"
+          [isBuying]="buyingServiceId() === item.id"
+          (buy)="onBuyService($event)"
+        ></app-service-item>
+      }
+    </div>
+  }
+
+  @if (issuedVoucher()) {
+    <app-voucher-card
+      [voucherCode]="issuedVoucher()!.code"
+      [serviceName]="issuedVoucher()!.serviceName"
+      (close)="onCloseVoucher()"
+    ></app-voucher-card>
+  }
+</div>

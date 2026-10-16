@@ -1,0 +1,27 @@
+<div class="service-card card">
+  <div class="card-badge">
+    {{ item.estabelecimentoId }}
+  </div>
+
+  <div class="card-content">
+    <h3 class="service-name">{{ item.nome }}</h3>
+    <span class="service-price">{{ item.precoReais | brlCurrency }}</span>
+  </div>
+
+  <button 
+    class="btn btn-primary btn-block" 
+    [disabled]="isBuying"
+    (click)="onBuy()"
+  >
+    @if (isBuying) {
+      <span>Processando...</span>
+    } @else {
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <path d="M16 10a4 4 0 0 1-8 0"></path>
+      </svg>
+      <span>Comprar com 1-Clique</span>
+    }
+  </button>
+</div>

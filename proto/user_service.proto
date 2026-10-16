@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package ufgpay.user;
+
+option csharp_namespace = "UfgPay.UserService.Grpc";
+
+// Serviço gRPC de Gestão de Usuários e Autenticação Acadêmica
+service UserGrpcService {
+  rpc Authenticate (AuthRequest) returns (AuthResponse);
+  rpc GetById (UserByIdRequest) returns (UserResponse);
+  rpc Register (RegisterUserRequest) returns (UserResponse);
+}
+
+message AuthRequest {
+  string matricula = 1;
+  string senha = 2;
+}
+
+message AuthResponse {
+  bool sucesso = 1;
+  string user_id = 2;
+  string nome = 3;
+  string email = 4;
+  string tipo_vinculo = 5;
+  string erro_mensagem = 6;
+}
+
+message UserByIdRequest {
+  string user_id = 1;
+}
+
+message RegisterUserRequest {
+  string matricula = 1;
+  string nome = 2;
+  string email = 3;
+  string senha = 4;
+  string tipo_vinculo = 5;
+}
+
+message UserResponse {
+  string user_id = 1;
+  string matricula = 2;
+  string nome = 3;
+  string email = 4;
+  string tipo_vinculo = 5;
+  bool ativo = 6;
+}

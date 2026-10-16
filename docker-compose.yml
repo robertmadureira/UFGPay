@@ -1,0 +1,150 @@
+services:
+  redis:
+    image: redis:7.4-alpine
+    container_name: ufg-pay-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    networks:
+      - ufgpay-network
+
+  db-user:
+    image: postgres:17-alpine
+    container_name: ufg-pay-db-user
+    environment:
+      POSTGRES_DB: ufg_user_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+    ports:
+      - "5433:5432"
+    volumes:
+      - user_data:/var/lib/postgresql/data
+      - ./app/backend/services/UfgPay.UserService/Infrastructure/Migrations/InitialCreate.sql:/docker-entrypoint-initdb.d/01-init.sql
+    restart: unless-stopped
+    networks:
+      - ufgpay-network
+
+  db-wallet:
+    image: postgres:17-alpine
+    container_name: ufg-pay-db-wallet
+    environment:
+      POSTGRES_DB: ufg_wallet_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+    ports:
+      - "5434:5432"
+    volumes:
+      - wallet_data:/var/lib/postgresql/data
+      - ./app/backend/services/UfgPay.WalletService/Infrastructure/Migrations/InitialCreate.sql:/docker-entrypoint-initdb.d/01-init.sql
+    restart: unless-stopped
+    networks:
+      - ufgpay-network
+
+  db-campus:
+    image: postgres:17-alpine
+    container_name: ufg-pay-db-campus
+    environment:
+      POSTGRES_DB: ufg_campus_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+    ports:
+      - "5435:5432"
+    volumes:
+      - campus_data:/var/lib/postgresql/data
+      - ./app/backend/services/UfgPay.CampusService/Infrastructure/Migrations/InitialCreate.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./app/backend/services/UfgPay.CampusService/Infrastructure/Migrations/SeedData.sql:/docker-entrypoint-initdb.d/02-seed.sql
+    restart: unless-stopped
+    networks:
+      - ufgpay-network
+
+  user-service:
+    build:
+      context: .
+      dockerfile: app/backend/services/UfgPay.UserService/Dockerfile
+    container_name: ufg-pay-user-service
+    environment:
+      ConnectionStrings__DefaultConnection: "Host=db-user;Port=5432;Database=ufg_user_db;Username=postgres;Password=postgrespassword"
+      ASPNETCORE_URLS: "http://+:5001"
+    ports:
+      - "5001:5001"
+    depends_on:
+      - db-user
+    restart: unless-stopped
+    networks:
+      - ufgpay-network
+
+  wallet-service:
+    build:
+      context: .
+      dockerfile: app/backend/services/UfgPay.WalletService/Dockerfile
+    container_name: ufg-pay-wallet-service
+    environment:
+      ConnectionStrings__DefaultConnection: "Host=db-wallet;Port=5432;Database=ufg_wallet_db;Username=postgres;Password=postgrespassword"
+      ASPNETCORE_URLS: "http://+:5002"
+    ports:
+      - "5002:5002"
+    depends_on:
+      - db-wallet
+    restart: unless-stopped
+    networks:
+      - ufgpay-network
+
+  campus-service:
+    build:
+      context: .
+      dockerfile: app/backend/services/UfgPay.CampusService/Dockerfile
+    container_name: ufg-pay-campus-service
+    environment:
+      ConnectionStrings__DefaultConnection: "Host=db-campus;Port=5432;Database=ufg_campus_db;Username=postgres;Password=postgrespassword"
+      ASPNETCORE_URLS: "http://+:5003"
+    ports:
+      - "5003:5003"
+    depends_on:
+      - db-campus
+    restart: unless-stopped
+    networks:
+      - ufgpay-network
+
+  gateway:
+    build:
+      context: .
+      dockerfile: app/backend/gateway/UfgPay.Gateway/Dockerfile
+    container_name: ufg-pay-gateway
+    environment:
+      ConnectionStrings__Redis: "redis:6379"
+      Services__UserService: "http://user-service:5001"
+      Services__WalletService: "http://wallet-service:5002"
+      Services__CampusService: "http://campus-service:5003"
+      ASPNETCORE_URLS: "http://+:5000"
+    ports:
+      - "5050:5000"
+    depends_on:
+      - redis
+      - user-service
+      - wallet-service
+      - campus-service
+    restart: unless-stopped
+    networks:
+      - ufgpay-network
+
+  frontend:
+    build:
+      context: app/frontend/ufg-pay-web
+      dockerfile: Dockerfile
+    container_name: ufg-pay-frontend
+    ports:
+      - "4200:80"
+    depends_on:
+      - gateway
+    restart: unless-stopped
+    networks:
+      - ufgpay-network
+
+volumes:
+  user_data:
+  wallet_data:
+  campus_data:
+
+networks:
+  ufgpay-network:
+    driver: bridge

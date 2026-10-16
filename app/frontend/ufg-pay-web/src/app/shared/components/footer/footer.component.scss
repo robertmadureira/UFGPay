@@ -1,0 +1,30 @@
+.footer-wrapper {
+  background-color: #ffffff;
+  border-top: 1px solid var(--ufg-border);
+  padding: 2rem 0;
+  margin-top: auto;
+}
+
+.footer-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.footer-brand {
+  font-size: 0.95rem;
+  color: var(--ufg-primary);
+}
+
+.footer-desc {
+  font-size: 0.85rem;
+  color: var(--ufg-text-muted);
+  margin-top: 0.25rem;
+}
+
+.footer-copy {
+  font-size: 0.8rem;
+  color: var(--ufg-text-muted);
+}

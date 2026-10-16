@@ -1,0 +1,48 @@
+<div class="dashboard-wrapper container">
+  <!-- Card de Saldo e Ações Rápidas -->
+  <section class="balance-section">
+    <app-balance-card
+      [saldoReais]="walletService.balance()?.saldoReais || 0"
+      [saldoCentavos]="walletService.balance()?.saldoCentavos || 0"
+      [bloqueada]="walletService.balance()?.bloqueada || false"
+      [userName]="authService.currentUser()?.nome || ''"
+    ></app-balance-card>
+  </section>
+
+  <!-- Grade de Atalhos e Serviços do Campus -->
+  <section class="services-preview-section">
+    <div class="section-header">
+      <div>
+        <h3>Serviços em Destaque no Campus</h3>
+        <p>Acesse o cardápio do RU, cópias e serviços com débito imediato em conta.</p>
+      </div>
+      <a routerLink="/campus" class="btn btn-outline btn-sm">Ver Catálogo Completo &rarr;</a>
+    </div>
+
+    @if (campusService.isLoading()) {
+      <div class="loading-state">Carregando catálogo do campus...</div>
+    } @else {
+      <div class="services-grid">
+        @for (item of campusService.services().slice(0, 4); track item.id) {
+          <div class="service-preview-card card">
+            <div class="service-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 8h1a4 4 0 0 1 0 8h-1"></path>
+                <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path>
+                <line x1="6" y1="1" x2="6" y2="4"></line>
+                <line x1="10" y1="1" x2="10" y2="4"></line>
+                <line x1="14" y1="1" x2="14" y2="4"></line>
+              </svg>
+            </div>
+            <div class="service-body">
+              <h4>{{ item.nome }}</h4>
+              <span class="service-establishment">{{ item.estabelecimentoId }}</span>
+              <div class="service-price">{{ item.precoReais | brlCurrency }}</div>
+            </div>
+            <a routerLink="/campus" class="btn btn-primary btn-sm btn-buy">Comprar Voucher</a>
+          </div>
+        }
+      </div>
+    }
+  </section>
+</div>

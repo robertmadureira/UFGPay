@@ -1,0 +1,99 @@
+.balance-card-container {
+  background: linear-gradient(135deg, #002d62 0%, #004b87 60%, #0b63ab 100%);
+  border-radius: 20px;
+  color: #ffffff;
+  padding: 2.25rem 2rem;
+  box-shadow: 0 12px 24px -6px rgba(0, 45, 98, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  position: relative;
+  overflow: hidden;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: -50px;
+    right: -50px;
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    background: rgba(255, 184, 28, 0.12);
+    pointer-events: none;
+  }
+}
+
+.card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+
+  .card-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+
+    .ufg-pill {
+      font-size: 0.8rem;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      background: rgba(255, 255, 255, 0.15);
+      padding: 0.25rem 0.65rem;
+      border-radius: 6px;
+    }
+
+    .status-badge {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #34d399;
+      background: rgba(52, 211, 153, 0.15);
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+
+      &.blocked {
+        color: #f87171;
+        background: rgba(248, 113, 113, 0.15);
+      }
+    }
+  }
+
+  .user-greeting {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #e2e8f0;
+  }
+}
+
+.card-middle {
+  .balance-label {
+    display: block;
+    font-size: 0.85rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 0.25rem;
+  }
+
+  .balance-amount {
+    font-size: 2.75rem;
+    font-weight: 800;
+    letter-spacing: -1px;
+    color: #ffffff;
+  }
+}
+
+.card-bottom {
+  .card-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+
+    .btn-sm {
+      padding: 0.6rem 1.15rem;
+      font-size: 0.9rem;
+    }
+  }
+}

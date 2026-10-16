@@ -1,0 +1,33 @@
+.campus-container {
+  padding-top: 2.5rem;
+  padding-bottom: 4rem;
+}
+
+.page-header {
+  margin-bottom: 2.5rem;
+
+  h2 {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--ufg-primary-dark);
+  }
+
+  p {
+    font-size: 0.95rem;
+    color: var(--ufg-text-muted);
+    margin-top: 0.35rem;
+  }
+}
+
+.services-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.loading-state {
+  text-align: center;
+  padding: 4rem;
+  color: var(--ufg-text-muted);
+  font-weight: 600;
+}

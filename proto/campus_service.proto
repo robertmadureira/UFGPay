@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package ufgpay.campus;
+
+option csharp_namespace = "UfgPay.CampusService.Grpc";
+
+// Serviço gRPC de Gestão do Catálogo do Campus e Processamento de Vouchers
+service CampusGrpcService {
+  rpc ListServices (EmptyRequest) returns (ServiceListResponse);
+  rpc ProcessOrder (ProcessOrderRequest) returns (OrderResponse);
+}
+
+message EmptyRequest {}
+
+message ServiceModel {
+  string id = 1;
+  string estabelecimento_id = 2;
+  string nome = 3;
+  int64 preco_centavos = 4;
+}
+
+message ServiceListResponse {
+  repeated ServiceModel servicos = 1;
+}
+
+message ProcessOrderRequest {
+  string user_id = 1;
+  string servico_id = 2;
+  int64 valor_centavos = 3;
+}
+
+message OrderResponse {
+  bool sucesso = 1;
+  string pedido_id = 2;
+  string codigo_voucher = 3;
+  string mensagem = 4;
+}

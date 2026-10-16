@@ -1,0 +1,206 @@
+.voucher-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+  backdrop-filter: blur(5px);
+}
+
+.voucher-card {
+  background-color: #ffffff;
+  border-radius: 20px;
+  max-width: 440px;
+  width: 100%;
+  padding: 2.25rem 2rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  text-align: center;
+  animation: popIn 0.3s ease;
+}
+
+.voucher-header {
+  margin-bottom: 1.25rem;
+
+  .success-icon {
+    width: 52px;
+    height: 52px;
+    background-color: #dcfce7;
+    color: #16a34a;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 0.75rem;
+  }
+
+  h3 {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: var(--ufg-primary-dark);
+  }
+
+  .service-highlight {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--ufg-text-muted);
+    margin-top: 0.25rem;
+  }
+}
+
+.voucher-body {
+  margin-bottom: 1.5rem;
+
+  .qr-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1.25rem;
+
+    .qr-image-wrapper {
+      position: relative;
+      background: #ffffff;
+      padding: 0.75rem;
+      border: 2px solid var(--ufg-border);
+      border-radius: 16px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07);
+      overflow: hidden;
+
+      .qr-image {
+        display: block;
+        width: 180px;
+        height: 180px;
+        border-radius: 8px;
+      }
+
+      .qr-scan-line {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, transparent, #ffb81c, transparent);
+        box-shadow: 0 0 8px #ffb81c;
+        animation: scan 2.5s ease-in-out infinite alternate;
+      }
+    }
+
+    .qr-mock-fallback {
+      width: 180px;
+      height: 180px;
+      padding: 0.75rem;
+      border: 2px solid var(--ufg-border);
+      border-radius: 16px;
+      background: #f8fafc;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+
+      .qr-svg {
+        width: 140px;
+        height: 140px;
+      }
+
+      .qr-mock-caption {
+        font-size: 0.7rem;
+        font-weight: 800;
+        color: var(--ufg-primary);
+        letter-spacing: 0.5px;
+      }
+    }
+  }
+
+  .voucher-code-box {
+    background-color: #f8fafc;
+    border: 1px solid var(--ufg-border);
+    border-radius: var(--radius-md);
+    padding: 0.85rem 1rem;
+    margin-bottom: 0.85rem;
+    text-align: left;
+
+    .label {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--ufg-text-muted);
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-bottom: 0.35rem;
+    }
+
+    .code-and-copy {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+
+      .code {
+        font-size: 1.15rem;
+        font-family: 'Courier New', monospace;
+        font-weight: 800;
+        color: var(--ufg-primary-dark);
+        letter-spacing: 1px;
+        word-break: break-all;
+      }
+
+      .btn-copy {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.35rem 0.65rem;
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--ufg-primary);
+        background-color: #e0f2fe;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        white-space: nowrap;
+
+        &:hover {
+          background-color: #bae6fd;
+        }
+
+        &.copied {
+          background-color: #dcfce7;
+          color: #16a34a;
+        }
+      }
+    }
+  }
+
+  .voucher-instructions {
+    font-size: 0.8rem;
+    color: var(--ufg-text-muted);
+    line-height: 1.4;
+  }
+}
+
+.voucher-footer {
+  .btn-block {
+    width: 100%;
+    padding: 0.85rem;
+  }
+}
+
+@keyframes scan {
+  0% {
+    top: 5%;
+  }
+  100% {
+    top: 90%;
+  }
+}
+
+@keyframes popIn {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

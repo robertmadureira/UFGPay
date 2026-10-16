@@ -1,0 +1,39 @@
+.service-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1.5rem;
+  height: 100%;
+}
+
+.card-badge {
+  display: inline-block;
+  align-self: flex-start;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--ufg-primary);
+  background: rgba(0, 75, 135, 0.08);
+  padding: 0.25rem 0.65rem;
+  border-radius: 6px;
+  text-transform: capitalize;
+}
+
+.card-content {
+  .service-name {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--ufg-text);
+    margin-bottom: 0.75rem;
+    line-height: 1.35;
+  }
+
+  .service-price {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--ufg-primary-dark);
+  }
+}
+
+.btn-block {
+  width: 100%;
+}

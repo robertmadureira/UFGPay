@@ -1,0 +1,52 @@
+<div class="auth-container">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="auth-badge">UFG Pay</div>
+      <h2>Acesso Institucional</h2>
+      <p>Informe sua matrícula e senha para gerenciar seus pagamentos acadêmicos.</p>
+    </div>
+
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="auth-form">
+      <div class="form-group">
+        <label for="matricula">Matrícula Acadêmica</label>
+        <input 
+          id="matricula" 
+          type="text" 
+          class="form-control" 
+          placeholder="Ex: 202401234" 
+          formControlName="matricula"
+        />
+        @if (loginForm.get('matricula')?.touched && loginForm.get('matricula')?.invalid) {
+          <div class="error-message">A matrícula é obrigatória (mínimo 5 caracteres).</div>
+        }
+      </div>
+
+      <div class="form-group">
+        <label for="senha">Senha</label>
+        <input 
+          id="senha" 
+          type="password" 
+          class="form-control" 
+          placeholder="••••••••" 
+          formControlName="senha"
+        />
+        @if (loginForm.get('senha')?.touched && loginForm.get('senha')?.invalid) {
+          <div class="error-message">A senha é obrigatória.</div>
+        }
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block" [disabled]="isSubmitting()">
+        @if (isSubmitting()) {
+          <span>Autenticando...</span>
+        } @else {
+          <span>Entrar no UFG Pay</span>
+        }
+      </button>
+
+      <div class="auth-footer">
+        <span>Não tem uma conta ainda?</span>
+        <a routerLink="/auth/register">Cadastre-se aqui</a>
+      </div>
+    </form>
+  </div>
+</div>

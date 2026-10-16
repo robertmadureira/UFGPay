@@ -1,0 +1,92 @@
+<div class="voucher-modal-backdrop">
+  <div class="voucher-card">
+    <div class="voucher-header">
+      <div class="success-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      </div>
+      <h3>Voucher Liberado!</h3>
+      <p class="service-highlight">{{ serviceName }}</p>
+    </div>
+
+    <div class="voucher-body">
+      <!-- QR Code Dinâmico / Scannable -->
+      <div class="qr-container">
+        @if (!imageError() && qrCodeUrl()) {
+          <div class="qr-image-wrapper">
+            <img 
+              [src]="qrCodeUrl()" 
+              [alt]="'QR Code do Voucher: ' + voucherCode" 
+              class="qr-image"
+              (error)="onImageError()"
+            />
+            <div class="qr-scan-line"></div>
+          </div>
+        } @else {
+          <!-- Fallback simulador de QR Code com SVG vetorial se offline -->
+          <div class="qr-mock-fallback">
+            <svg class="qr-svg" viewBox="0 0 100 100">
+              <!-- Padrões dos cantos típicos de QR Code -->
+              <rect x="5" y="5" width="28" height="28" fill="#002d62" rx="4"/>
+              <rect x="9" y="9" width="20" height="20" fill="#ffffff" rx="2"/>
+              <rect x="13" y="13" width="12" height="12" fill="#002d62" rx="2"/>
+
+              <rect x="67" y="5" width="28" height="28" fill="#002d62" rx="4"/>
+              <rect x="71" y="9" width="20" height="20" fill="#ffffff" rx="2"/>
+              <rect x="75" y="13" width="12" height="12" fill="#002d62" rx="2"/>
+
+              <rect x="5" y="67" width="28" height="28" fill="#002d62" rx="4"/>
+              <rect x="9" y="71" width="20" height="20" fill="#ffffff" rx="2"/>
+              <rect x="13" y="75" width="12" height="12" fill="#002d62" rx="2"/>
+
+              <!-- Matriz simulada -->
+              <rect x="40" y="8" width="8" height="8" fill="#002d62"/>
+              <rect x="52" y="8" width="8" height="8" fill="#002d62"/>
+              <rect x="44" y="20" width="8" height="8" fill="#002d62"/>
+              <rect x="40" y="40" width="20" height="20" fill="#002d62" rx="2"/>
+              <rect x="12" y="44" width="8" height="8" fill="#002d62"/>
+              <rect x="80" y="44" width="8" height="8" fill="#002d62"/>
+              <rect x="44" y="68" width="8" height="8" fill="#002d62"/>
+              <rect x="56" y="76" width="8" height="8" fill="#002d62"/>
+              <rect x="72" y="68" width="16" height="16" fill="#002d62"/>
+            </svg>
+            <span class="qr-mock-caption">UFG PAY TOKEN</span>
+          </div>
+        }
+      </div>
+
+      <div class="voucher-code-box">
+        <span class="label">Código de Liberação:</span>
+        <div class="code-and-copy">
+          <strong class="code">{{ voucherCode }}</strong>
+          <button 
+            type="button" 
+            class="btn-copy" 
+            [class.copied]="copied()" 
+            (click)="onCopyCode()" 
+            [title]="copied() ? 'Copiado!' : 'Copiar código'"
+          >
+            @if (copied()) {
+              <span>✓ Copiado</span>
+            } @else {
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              <span>Copiar</span>
+            }
+          </button>
+        </div>
+      </div>
+
+      <p class="voucher-instructions">
+        Aproxime o QR Code do leitor da catraca ou caixa do estabelecimento para validar seu consumo.
+      </p>
+    </div>
+
+    <div class="voucher-footer">
+      <button class="btn btn-primary btn-block" (click)="onClose()">Concluir</button>
+    </div>
+  </div>
+</div>

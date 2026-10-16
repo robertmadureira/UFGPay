@@ -1,0 +1,105 @@
+.navbar-wrapper {
+  background-color: #ffffff;
+  border-bottom: 1px solid var(--ufg-border);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+}
+
+.navbar-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 4.5rem;
+}
+
+.navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+
+  .brand-badge {
+    background: linear-gradient(135deg, #004b87, #002d62);
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 1.1rem;
+    padding: 0.3rem 0.65rem;
+    border-radius: 8px;
+    letter-spacing: -0.5px;
+  }
+
+  .brand-title {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #ffb81c;
+    letter-spacing: -0.5px;
+  }
+}
+
+.navbar-nav {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+
+  .nav-link {
+    color: var(--ufg-text-muted);
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: color 0.2s ease;
+
+    &:hover, &.active {
+      color: var(--ufg-primary);
+    }
+  }
+}
+
+.user-pill {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background-color: #f1f5f9;
+  padding: 0.4rem 0.8rem 0.4rem 1rem;
+  border-radius: 9999px;
+  border: 1px solid var(--ufg-border);
+
+  .user-info {
+    display: flex;
+    flex-direction: column;
+    text-align: right;
+
+    .user-name {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--ufg-text);
+      max-width: 140px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .user-balance {
+      font-size: 0.75rem;
+      font-weight: 800;
+      color: var(--ufg-success);
+    }
+  }
+
+  .btn-logout {
+    background: transparent;
+    border: none;
+    color: var(--ufg-text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.35rem;
+    border-radius: 50%;
+    transition: all 0.2s;
+
+    &:hover {
+      background-color: #e2e8f0;
+      color: var(--ufg-danger);
+    }
+  }
+}

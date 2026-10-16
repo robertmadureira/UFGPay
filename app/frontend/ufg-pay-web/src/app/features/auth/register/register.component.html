@@ -1,0 +1,54 @@
+<div class="auth-container">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="auth-badge">Novo Aluno / Servidor</div>
+      <h2>Criar Conta no UFG Pay</h2>
+      <p>Cadastre-se para ativar sua carteira digital institucional.</p>
+    </div>
+
+    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="auth-form">
+      <div class="form-group">
+        <label for="matricula">Matrícula</label>
+        <input id="matricula" type="text" class="form-control" placeholder="Ex: 202401234" formControlName="matricula" />
+      </div>
+
+      <div class="form-group">
+        <label for="nome">Nome Completo</label>
+        <input id="nome" type="text" class="form-control" placeholder="Ex: Maria Oliveira" formControlName="nome" />
+      </div>
+
+      <div class="form-group">
+        <label for="email">E-mail Institucional (&#64;ufg.br ou &#64;discente.ufg.br)</label>
+        <input id="email" type="email" class="form-control" placeholder="seu.nome@discente.ufg.br" formControlName="email" />
+      </div>
+
+      <div class="form-group">
+        <label for="tipoVinculo">Vínculo com a UFG</label>
+        <select id="tipoVinculo" class="form-control" formControlName="tipoVinculo">
+          <option value="discente">Discente (Estudante)</option>
+          <option value="docente">Docente (Professor)</option>
+          <option value="tecnico">Técnico-Administrativo (TAE)</option>
+          <option value="terceirizado">Colaborador Terceirizado</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="senha">Senha de Acesso</label>
+        <input id="senha" type="password" class="form-control" placeholder="Mínimo 6 caracteres" formControlName="senha" />
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block" [disabled]="isSubmitting()">
+        @if (isSubmitting()) {
+          <span>Cadastrando e gerando carteira...</span>
+        } @else {
+          <span>Finalizar Cadastro</span>
+        }
+      </button>
+
+      <div class="auth-footer">
+        <span>Já possui uma conta?</span>
+        <a routerLink="/auth/login">Fazer Login</a>
+      </div>
+    </form>
+  </div>
+</div>
