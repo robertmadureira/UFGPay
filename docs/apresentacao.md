@@ -2,23 +2,9 @@
 
 **Projeto:** UFG Pay - Sistema Distribuído de Pagamentos Acadêmicos  
 **Instituição:** Universidade Federal de Goiás (UFG)  
-**Tempo Limite:** 10 minutos *(Rigoroso: exceder o tempo zera o quesito oral)*  
-**Ambiente:** Google Cloud Platform (GCP) em Produção + GKE + Cloud CDN
 
 ---
 
-## ⏱️ Cronograma da Apresentação (10 Minutos)
-
-| Bloco | Tempo | Foco | O que Demonstrar |
-| :--- | :--- | :--- | :--- |
-| **1. Introdução & Arquitetura** | 0:00 - 1:45 *(1m45s)* | Contexto e Engenharia | Problema da UFG, padrão Database-per-Service, gRPC binário e Cache Redis. |
-| **2. Código & Contratos** | 1:45 - 3:00 *(1m15s)* | Código & Padrões | Contratos `.proto`, Clean Architecture, Middlewares do Gateway e FluentValidation. |
-| **3. Demonstração Prática (Ao Vivo)** | 3:00 - 7:30 *(4m30s)* | Jornada Ponta a Ponta | Frontend $\rightarrow$ Gateway $\rightarrow$ gRPC $\rightarrow$ Validação dos status HTTP (**400, 401, 200, 201**). |
-| **4. Persistência Real no Banco** | 7:30 - 8:45 *(1m15s)* | Prova Real (Sem Mocks) | Consulta ao vivo das tabelas Postgres (`usuarios`, `contas`, `transacoes`, `pedidos_consumo`). |
-| **5. Conclusão & Tolerância a Falhas** | 8:45 - 9:45 *(1m00s)* | Diferenciais Técnicos | Compensação atômica (estorno automático), cache-aside e precisão em centavos. |
-| **Buffer de Segurança** | 9:45 - 10:00 *(15s)* | Encerramento | Agradecimentos e abertura para perguntas da banca. |
-
----
 
 ## 🏛️ Arquitetura do Sistema (Padrões Implementados)
 
@@ -57,7 +43,7 @@ flowchart TD
     CampusSvc -->|EF Core Npgsql| DBCampus
 ```
 
-### Destaques Arquiteturais para Defender na Apresentação:
+### Destaques Arquiteturais:
 1. **Database-per-Service:** Nenhuma tabela é compartilhada entre microsserviços. O isolamento é total entre identidade acadêmica (`ufg_user_db`), transações financeiras (`ufg_wallet_db`) e consumo do RU (`ufg_campus_db`).
 2. **Comunicação Binária gRPC (HTTP/2):** O Gateway orquestra chamadas com contratos tipados e serialização Protocol Buffers (`.proto3`), proporcionando altíssima performance e baixíssima latência.
 3. **Precisão Financeira Estrita:** Saldos e valores manipulados exclusivamente em **centavos (`int64` / `BIGINT`)** com constraint no PostgreSQL (`saldo_centavos >= 0`), eliminando qualquer risco de inconsistência por ponto flutuante.
@@ -65,7 +51,7 @@ flowchart TD
 
 ---
 
-## 🚦 Matriz de Validação dos Status HTTP (Obrigatório: 60% da Nota)
+## 🚦 Matriz de Validação dos Status HTTP
 
 | Status HTTP | Endpoint | Cenário Prático na Demonstração | Como Disparar ao Vivo |
 | :--- | :--- | :--- | :--- |
@@ -82,9 +68,9 @@ flowchart TD
 
 ---
 
-## 🎬 Roteiro Prático da Demonstração (Passo a Passo)
+## 🎬 Endereços
 
-### Passo 1: Abrir as Abas no Navegador Antes de Começar
+### Passo 1
 Deixe 3 abas abertas no navegador:
 1. **Aba 1 (Frontend):** `http://136.68.133.89`
 2. **Aba 2 (Swagger da API Gateway):** `http://34.36.247.109`
@@ -92,55 +78,6 @@ Deixe 3 abas abertas no navegador:
 
 ---
 
-### Passo 2: Demonstração da Jornada (3:00 - 7:30)
-
-1. **Provando o `400 Bad Request` (Validação):**
-   - Acesse a tela de cadastro no Frontend.
-   - Digite um e-mail inválido (ex: `teste@gmail.com` em vez do padrão institucional) ou deixe campos vazios.
-   - Abra o **DevTools (F12 $\rightarrow$ Network)** e clique em Cadastrar.
-   - **Mostre à banca:** O Gateway interceptou via `FluentValidation` e retornou **HTTP 400 Bad Request**.
-
-2. **Provando o `201 Created` (Criação Atômica):**
-   - Preencha os dados válidos:
-     - Nome: `Aluno Teste UFG`
-     - Matrícula: `202499001`
-     - E-mail: `alunoteste@discente.ufg.br`
-     - Senha: `SenhaSegura123!`
-     - Vínculo: `Estudante`
-   - Clique em **Criar Conta**.
-   - **Mostre à banca:** Status **HTTP 201 Created**.
-   - Explique que o Gateway orquestrou duas chamadas gRPC: registrou o usuário no `UserService` e inicializou atômica e imediatamente a conta no `WalletService` com saldo R$ 0,00.
-
-3. **Provando o `401 Unauthorized` (Segurança):**
-   - Saia para a tela de login.
-   - Digite a matrícula `202499001` e a senha errada `123456`.
-   - Clique em Entrar.
-   - **Mostre à banca:** O `UserService` validou o hash criptográfico e o Gateway retornou **HTTP 401 Unauthorized**.
-
-4. **Provando o `200 OK` (Login & JWT):**
-   - Digite a senha correta `SenhaSegura123!`.
-   - Clique em Entrar.
-   - **Mostre à banca:** Retorno **HTTP 200 OK** com o token JWT gerado e redirecionamento para o Dashboard.
-
-5. **Provando o `400 Bad Request` no Checkout (Saldo Insuficiente):**
-   - No Dashboard, note que o saldo inicial é `R$ 0,00`.
-   - Vá para o **Catálogo do RU / Campus**.
-   - Tente comprar o Almoço Estudante (R$ 4,00).
-   - **Mostre à banca:** Status **HTTP 400 Bad Request** com a mensagem *"Saldo insuficiente para realizar a compra"*.
-
-6. **Provando o `200 OK` (Recarga PIX & Invalidação de Cache):**
-   - Vá na aba **Recarga PIX**.
-   - Digite o valor de `R$ 20,00` e confirme.
-   - **Mostre à banca:** Retorno **HTTP 200 OK**. O saldo agora é `R$ 20,00`.
-   - Destaque que o saldo anterior em cache no Redis foi invalidado proativamente e atualizado.
-
-7. **Provando o `201 Created` (Checkout & Emissão de Voucher):**
-   - Volte ao **Catálogo do RU**.
-   - Compre a refeição de `R$ 4,00`.
-   - **Mostre à banca:** Retorno **HTTP 201 Created**.
-   - O saldo cai para `R$ 16,00` e o **Voucher Digital** com código alfanumérico seguro é exibido na tela para ser apresentado na catraca do RU!
-
----
 
 ## 🗄️ Estrutura do Banco de Dados e Modelagem Relacional
 
@@ -231,14 +168,35 @@ erDiagram
 
 ## 🗄️ Comprovação de Persistência Real no Banco de Dados (Sem Mocks)
 
-### Dados de Acesso Oficial ao Cloud SQL:
-- **Host do Banco (IP Privado VPC):** `$DB_HOST` (ex: `10.60.0.3`)
+Para comprovar à banca examinadora que todos os dados são persistidos de verdade e sem dados simulados (mocks), você pode demonstrar tanto pela **interface online do Google Cloud** quanto pelo **terminal**:
+
+### 🌐 Opção A: Visualização Online no Navegador (Cloud SQL Studio)
+
+O Google Cloud possui o **Cloud SQL Studio**, um gerenciador de banco de dados nativo no navegador onde você pode abrir as tabelas e rodar consultas com um clique:
+
+- 📊 **Link Direto do Cloud SQL Studio (Query Editor Online):**  
+  👉 **[https://console.cloud.google.com/sql/instances/ufgpay-prod-postgres17/studio?project=ufg-pay-12432](https://console.cloud.google.com/sql/instances/ufgpay-prod-postgres17/studio?project=ufg-pay-12432)**  
+  *(Selecione o banco `ufg_user_db`, `ufg_wallet_db` ou `ufg_campus_db`, autentique com o usuário `ufgpay_app` e execute os comandos SQL diretamente no navegador).*
+
+- 🗂️ **Link da Lista das 3 Bases de Dados (Database-per-Service):**  
+  👉 **[https://console.cloud.google.com/sql/instances/ufgpay-prod-postgres17/databases?project=ufg-pay-12432](https://console.cloud.google.com/sql/instances/ufgpay-prod-postgres17/databases?project=ufg-pay-12432)**  
+  *(Mostre as 3 bases independentes criadas: `ufg_user_db`, `ufg_wallet_db` e `ufg_campus_db`).*
+
+- ⚙️ **Visão Geral da Instância de Produção:**  
+  👉 **[https://console.cloud.google.com/sql/instances/ufgpay-prod-postgres17/overview?project=ufg-pay-12432](https://console.cloud.google.com/sql/instances/ufgpay-prod-postgres17/overview?project=ufg-pay-12432)**
+
+---
+
+### 💻 Opção B: Consulta Rápida via Terminal (Cloud Shell)
+
+**Credenciais Oficiais:**
+- **Host do Banco (IP Privado VPC):** `$DB_HOST`
 - **Usuário:** `ufgpay_app`
 - **Senha Oficial de Produção:** `oeQAJ<Sfc!Yfddal0iA6([*seTw!}N}[`
 
 ---
 
-### Passo a Passo para Demonstrar no Cloud Shell:
+### Demonstrar no Cloud Shell:
 
 No seu terminal do Google Cloud Shell, execute:
 
@@ -262,7 +220,6 @@ psql -h $DB_HOST -U ufgpay_app -d ufg_user_db -c "
 SELECT id, matricula, nome, email, tipo_vinculo, criado_em FROM usuarios;
 "
 ```
-*(Mostre à banca o registro recém-criado com a matrícula `202499001`!)*
 
 #### 2. Provar Saldo e Extrato Real da Carteira (`ufg_wallet_db`):
 ```sql
@@ -271,7 +228,7 @@ SELECT user_id, saldo_centavos, atualizado_em FROM contas;
 SELECT user_id, tipo, valor_centavos, descricao, criado_em FROM transacoes ORDER BY criado_em DESC;
 "
 ```
-*(Mostre à banca o saldo atualizado e o histórico com a recarga PIX e o débito do RU!)*
+
 
 #### 3. Provar o Voucher Emitido (`ufg_campus_db`):
 ```sql
@@ -279,18 +236,5 @@ psql -h $DB_HOST -U ufgpay_app -d ufg_campus_db -c "
 SELECT id, user_id, valor_centavos, status, codigo_voucher, criado_em FROM pedidos_consumo ORDER BY criado_em DESC;
 "
 ```
-*(Mostre à banca que o código do voucher gravado no PostgreSQL é idêntico ao exibido na tela do estudante!)*
 
 ---
-
-## 💡 Dicas de Ouro para a Apresentação Oral (10% da Nota)
-
-1. **Domínio do Tempo:**
-   - Pratique o roteiro com um cronômetro no celular. O ideal é terminar a demonstração entre **8min30s e 9min00s**, deixando 1 minuto de margem.
-2. **Linguagem Técnica Precisa:**
-   - Diga: *"Adotamos o padrão Database-per-Service para isolamento de falhas..."*
-   - Diga: *"A comunicação interna é via gRPC HTTP/2 binário sobre contratos Protocol Buffers versão 3..."*
-   - Diga: *"O saldo é modelado estritamente em centavos int64 com check constraint no PostgreSQL para impedir saldo negativo a nível de banco..."*
-   - Diga: *"Implementamos Cache-Aside no Redis com invalidação proativa no evento de escrita..."*
-3. **Se a banca perguntar sobre Mocks:**
-   - Mostre as tabelas do PostgreSQL e a aba Network do DevTools provando que cada clique aciona o Gateway e grava nos bancos de dados gerenciados no Cloud SQL.

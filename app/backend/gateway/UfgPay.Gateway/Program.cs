@@ -148,4 +148,8 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+// Health Check Endpoints para o Google Cloud Load Balancer (Ingress)
+app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
+app.MapGet("/", () => Results.Ok(new { status = "healthy", service = "UfgPay.Gateway", timestamp = DateTime.UtcNow }));
+
 app.Run();

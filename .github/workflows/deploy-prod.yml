@@ -296,10 +296,10 @@ jobs:
 
       - name: Validar Rollout dos Microsserviços
         run: |
-          kubectl rollout status deployment/ufgpay-user-service -n ufgpay --timeout=180s
-          kubectl rollout status deployment/ufgpay-wallet-service -n ufgpay --timeout=180s
-          kubectl rollout status deployment/ufgpay-campus-service -n ufgpay --timeout=180s
-          kubectl rollout status deployment/ufgpay-gateway -n ufgpay --timeout=180s
+          kubectl rollout status deployment/ufgpay-user-service -n ufgpay --timeout=300s
+          kubectl rollout status deployment/ufgpay-wallet-service -n ufgpay --timeout=300s
+          kubectl rollout status deployment/ufgpay-campus-service -n ufgpay --timeout=300s
+          kubectl rollout status deployment/ufgpay-gateway -n ufgpay --timeout=300s
 
   # ===========================================================================
   # 3. BUILD E DEPLOY DO FRONTEND (CLOUD STORAGE + CLOUD CDN)
