@@ -109,9 +109,20 @@ jobs:
           import_if_missing "google_compute_firewall.allow_internal" "projects/$PROJECT/global/firewalls/ufgpay-prod-allow-internal"
           import_if_missing "google_compute_firewall.allow_health_checks" "projects/$PROJECT/global/firewalls/ufgpay-prod-allow-health-checks"
 
-          # Frontend CDN e Bucket
+          # Frontend CDN e Load Balancer
           import_if_missing "google_storage_bucket.frontend" "ufgpay-prod-frontend-static-$PROJECT"
           import_if_missing "google_compute_global_address.frontend_ip" "projects/$PROJECT/global/addresses/ufgpay-prod-frontend-global-ip"
+          import_if_missing "google_compute_backend_bucket.frontend_cdn" "projects/$PROJECT/global/backendBuckets/ufgpay-prod-frontend-backend-bucket"
+          import_if_missing "google_compute_url_map.frontend_url_map" "projects/$PROJECT/global/urlMaps/ufgpay-prod-frontend-url-map"
+          import_if_missing "google_compute_target_http_proxy.frontend_http_proxy" "projects/$PROJECT/global/targetHttpProxies/ufgpay-prod-frontend-http-proxy"
+          import_if_missing "google_compute_global_forwarding_rule.frontend_http_rule" "projects/$PROJECT/global/forwardingRules/ufgpay-prod-frontend-http-forwarding-rule"
+
+          # Cloud SQL PostgreSQL 17 e Bancos
+          import_if_missing "google_sql_database_instance.postgres" "projects/$PROJECT/instances/ufgpay-prod-postgres17"
+          import_if_missing "google_sql_database.user_db" "projects/$PROJECT/instances/ufgpay-prod-postgres17/databases/ufg_user_db"
+          import_if_missing "google_sql_database.wallet_db" "projects/$PROJECT/instances/ufgpay-prod-postgres17/databases/ufg_wallet_db"
+          import_if_missing "google_sql_database.campus_db" "projects/$PROJECT/instances/ufgpay-prod-postgres17/databases/ufg_campus_db"
+          import_if_missing "google_sql_user.app_user" "projects/$PROJECT/instances/ufgpay-prod-postgres17/users/ufgpay_app//"
 
           # Artifact Registry
           import_if_missing "google_artifact_registry_repository.docker_repo" "projects/$PROJECT/locations/$REGION/repositories/ufgpay-prod-docker-repo"
