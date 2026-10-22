@@ -142,44 +142,144 @@ Deixe 3 abas abertas no navegador:
 
 ---
 
+## 🗄️ Estrutura do Banco de Dados e Modelagem Relacional
+
+O UFG Pay implementa o padrão **Database-per-Service**, garantindo isolamento total de esquemas, ciclo de vida e concorrência através de 3 bases lógicas no **PostgreSQL 17**:
+
+```mermaid
+erDiagram
+    %% BANCO 1: ufg_user_db
+    USUARIOS {
+        uuid id PK "DEFAULT uuid_generate_v4()"
+        varchar matricula UK "Matrícula acadêmica (ex: 202499001)"
+        varchar nome "Nome completo do aluno/servidor"
+        varchar email UK "E-mail institucional (@ufg.br)"
+        varchar senha_hash "Hash seguro PBKDF2/BCrypt com Salt"
+        varchar tipo_vinculo "Estudante | Servidor | Visitante"
+        boolean ativo "Status da conta acadêmica"
+        timestamptz criado_em "Data de cadastro"
+    }
+
+    %% BANCO 2: ufg_wallet_db
+    CONTAS {
+        uuid id PK "DEFAULT uuid_generate_v4()"
+        uuid user_id UK "Chave lógica do usuário (UserService)"
+        bigint saldo_centavos "Saldo em centavos (CHECK >= 0)"
+        boolean bloqueada "Bloqueio preventivo antifraude"
+        timestamptz atualizado_em "Última atualização de saldo"
+    }
+
+    TRANSACOES {
+        uuid id PK "DEFAULT uuid_generate_v4()"
+        uuid user_id FK "Vínculo ao usuário (INDEX)"
+        varchar tipo "DEPOSITO_PIX | DEBITO_CONSUMO | ESTORNO"
+        bigint valor_centavos "Valor da movimentação financeira"
+        varchar descricao "Detalhamento da transação"
+        timestamptz criado_em "Registro imutável de auditoria"
+    }
+
+    CONTAS ||--o{ TRANSACOES : "audita"
+
+    %% BANCO 3: ufg_campus_db
+    ESTABELECIMENTOS {
+        varchar id PK "ru_samambaia | reprografia | lanchonete"
+        varchar nome "Nome do ponto de consumo na UFG"
+        varchar categoria "Alimentação | Gráfica | Biblioteca"
+        boolean ativo "Disponibilidade operacional"
+    }
+
+    SERVICOS_CAMPUS {
+        uuid id PK "Identificador único do item"
+        varchar estabelecimento_id FK "Vínculo ao estabelecimento"
+        varchar nome "Almoço RU | Café | Cópia P&B"
+        bigint preco_centavos "Preço oficial (ex: 400 = R$ 4,00)"
+        boolean ativo "Disponível no cardápio"
+    }
+
+    PEDIDOS_CONSUMO {
+        uuid id PK "Identificador do pedido"
+        uuid user_id "Chave lógica do aluno consumidor"
+        uuid servico_id FK "Item consumido"
+        bigint valor_centavos "Valor debitado na compra"
+        varchar status "CONFIRMADO | CANCELADO | UTILIZADO"
+        varchar codigo_voucher UK "Código criptográfico seguro"
+        timestamptz criado_em "Data e hora da emissão"
+    }
+
+    ESTABELECIMENTOS ||--o{ SERVICOS_CAMPUS : "oferece"
+    SERVICOS_CAMPUS ||--o{ PEDIDOS_CONSUMO : "gera"
+```
+
+### Detalhamento das 3 Bases de Dados:
+
+#### 1. `ufg_user_db` (Gestão de Identidade Acadêmica)
+- **Tabela `usuarios`**: Armazena cadastros acadêmicos.
+  - Índices únicos: `idx_usuarios_matricula` e `idx_usuarios_email`.
+  - Senhas protegidas por hash criptográfico seguro (nenhuma senha é salva em texto puro).
+
+#### 2. `ufg_wallet_db` (Core Bancário & Carteira Digital)
+- **Tabela `contas`**: Armazena o saldo em moeda soberana digital.
+  - **Constraint Financeira Crítica**: `CONSTRAINT chk_saldo_positivo CHECK (saldo_centavos >= 0)` que impede saldo negativo diretamente no motor do PostgreSQL.
+- **Tabela `transacoes`**: Livro-razão contábil (*ledger*) imutável para auditoria de cada recarga PIX, pagamento no RU ou estorno de compensação.
+
+#### 3. `ufg_campus_db` (Catálogo e Vouchers de Consumo)
+- **Tabela `estabelecimentos`**: Locais físicos credenciados nos campi (Samambaia, Colemar, INF, Gráfica).
+- **Tabela `servicos_campus`**: Cardápio oficial e taxas (Almoço RU R$ 4,00, Café R$ 2,50, etc.).
+- **Tabela `pedidos_consumo`**: Vouchers digitais emitidos. Possui o índice único `idx_pedidos_voucher` sobre `codigo_voucher` para validação imediata nos balcões.
+
+---
+
 ## 🗄️ Comprovação de Persistência Real no Banco de Dados (Sem Mocks)
 
-Abra o Cloud Shell e rode as consultas abaixo para provar à banca que todos os dados foram gravados diretamente nos bancos PostgreSQL:
+### Dados de Acesso Oficial ao Cloud SQL:
+- **Host do Banco (IP Privado VPC):** `$DB_HOST` (ex: `10.60.0.3`)
+- **Usuário:** `ufgpay_app`
+- **Senha Oficial de Produção:** `oeQAJ<Sfc!Yfddal0iA6([*seTw!}N}[`
 
-### 1. Conectar via Cloud Shell ao PostgreSQL 17:
+---
+
+### Passo a Passo para Demonstrar no Cloud Shell:
+
+No seu terminal do Google Cloud Shell, execute:
+
 ```bash
-# Executa um container temporário conectado ao IP privado do banco via rede VPC
-kubectl run psql-client --rm -i --tty --image=postgres:17-alpine --namespace=ufgpay -- /bin/sh
+# 1. Captura o IP privado do PostgreSQL automaticamente
+export DB_HOST=$(gcloud sql instances describe ufgpay-prod-postgres17 --project=ufg-pay-12432 --format='value(ipAddresses.filter(type:PRIVATE).ipAddress)')
+export DB_PASS='oeQAJ<Sfc!Yfddal0iA6([*seTw!}N}['
+
+# 2. Inicia o cliente PostgreSQL interativo dentro do cluster GKE
+kubectl run psql-client --rm -i --tty --image=postgres:17-alpine --namespace=ufgpay \
+  --env="DB_HOST=$DB_HOST" \
+  --env="PGPASSWORD=$DB_PASS" \
+  -- /bin/sh
 ```
 
-Dentro do shell do cliente, conecte-se a cada um dos 3 bancos:
+Assim que o prompt `#` abrir dentro do pod, execute as consultas reais:
 
-### 2. Provar Usuário Cadastrado (`ufg_user_db`):
+#### 1. Provar Aluno Cadastrado (`ufg_user_db`):
 ```sql
-PGPASSWORD='SUA_SENHA_DO_BANCO' psql -h 10.60.0.3 -U ufgpay_app -d ufg_user_db
-
+psql -h $DB_HOST -U ufgpay_app -d ufg_user_db -c "
 SELECT id, matricula, nome, email, tipo_vinculo, criado_em FROM usuarios;
+"
 ```
-*(Mostre a linha com o aluno recém-cadastrado `202499001`!)*
+*(Mostre à banca o registro recém-criado com a matrícula `202499001`!)*
 
-### 3. Provar Saldo e Transações Financeiras (`ufg_wallet_db`):
+#### 2. Provar Saldo e Extrato Real da Carteira (`ufg_wallet_db`):
 ```sql
-PGPASSWORD='SUA_SENHA_DO_BANCO' psql -h 10.60.0.3 -U ufgpay_app -d ufg_wallet_db
-
--- Ver a conta e o saldo em centavos (1600 centavos = R$ 16,00)
+psql -h $DB_HOST -U ufgpay_app -d ufg_wallet_db -c "
 SELECT user_id, saldo_centavos, atualizado_em FROM contas;
-
--- Ver o extrato real (o depósito PIX de R$ 20,00 e o débito do RU de R$ 4,00)
-SELECT user_id, tipo, valor_centavos, descricao, criado_em FROM transacoes;
+SELECT user_id, tipo, valor_centavos, descricao, criado_em FROM transacoes ORDER BY criado_em DESC;
+"
 ```
+*(Mostre à banca o saldo atualizado e o histórico com a recarga PIX e o débito do RU!)*
 
-### 4. Provar o Voucher e Pedido de Consumo (`ufg_campus_db`):
+#### 3. Provar o Voucher Emitido (`ufg_campus_db`):
 ```sql
-PGPASSWORD='SUA_SENHA_DO_BANCO' psql -h 10.60.0.3 -U ufgpay_app -d ufg_campus_db
-
-SELECT id, user_id, valor_centavos, status, codigo_voucher, criado_em FROM pedidos_consumo;
+psql -h $DB_HOST -U ufgpay_app -d ufg_campus_db -c "
+SELECT id, user_id, valor_centavos, status, codigo_voucher, criado_em FROM pedidos_consumo ORDER BY criado_em DESC;
+"
 ```
-*(Mostre o código do voucher gerado que é exatamente o mesmo exibido na tela do estudante!)*
+*(Mostre à banca que o código do voucher gravado no PostgreSQL é idêntico ao exibido na tela do estudante!)*
 
 ---
 
