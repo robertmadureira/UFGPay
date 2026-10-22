@@ -51,6 +51,18 @@ variable "db_tier" {
   default     = "db-custom-2-7680"
 }
 
+variable "db_edition" {
+  description = "Edição do Cloud SQL (ENTERPRISE ou ENTERPRISE_PLUS)"
+  type        = string
+  default     = "ENTERPRISE"
+}
+
+variable "db_availability_type" {
+  description = "Disponibilidade da instância Cloud SQL (ZONAL ou REGIONAL para alta disponibilidade)"
+  type        = string
+  default     = "ZONAL"
+}
+
 variable "db_version" {
   description = "Versão do banco de dados PostgreSQL no Cloud SQL"
   type        = string

@@ -12,7 +12,8 @@ resource "google_sql_database_instance" "postgres" {
 
   settings {
     tier              = var.db_tier
-    availability_type = var.environment == "prod" ? "REGIONAL" : "ZONAL"
+    edition           = var.db_edition
+    availability_type = var.db_availability_type
     disk_size         = var.db_disk_size_gb
     disk_type         = "PD_SSD"
     disk_autoresize   = true
