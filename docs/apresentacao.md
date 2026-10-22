@@ -238,3 +238,10 @@ SELECT id, user_id, valor_centavos, status, codigo_voucher, criado_em FROM pedid
 ```
 
 ---
+
+### Links
+BD: https://console.cloud.google.com/sql/instances?project=ufg-pay-12432
+cache: https://console.cloud.google.com/memorystore/redis/instances?project=ufg-pay-12432
+back: https://console.cloud.google.com/kubernetes/workload/overview?project=ufg-pay-12432
+front: https://console.cloud.google.com/storage/browser?project=ufg-pay-12432 e https://console.cloud.google.com/net-services/loadbalancing/loadBalancers/list?project=ufg-pay-12432
+docker: https://console.cloud.google.com/artifacts?project=ufg-pay-12432
