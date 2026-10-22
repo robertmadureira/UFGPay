@@ -1,4 +1,4 @@
-# 🎓 Roteiro de Apresentação Técnica - UFG Pay
+# 🎓 Apresentação Técnica - UFG Pay
 
 **Projeto:** UFG Pay - Sistema Distribuído de Pagamentos Acadêmicos  
 **Instituição:** Universidade Federal de Goiás (UFG)  
@@ -6,48 +6,9 @@
 ---
 
 
-## 🏛️ Arquitetura do Sistema (Padrões Implementados)
+## 🏛️ Arquitetura do Sistema
 
-```mermaid
-flowchart TD
-    subgraph Client["Camada de Apresentação (Borda Global)"]
-        SPA["Frontend SPA (Angular 19+)\nStandalone • Signals • RxJS\nGoogle Cloud CDN (Porta 80)\nhttp://136.68.133.89"]
-    end
-
-    subgraph Edge["Camada de Borda & Orquestração (GKE)"]
-        Gateway["API Gateway / BFF (ASP.NET Core .NET 9)\nJWT • FluentValidation • Orquestrador\nhttp://34.36.247.109"]
-        Redis[("Cloud Memorystore Redis 7.2\nCache-Aside de Catálogo (30m)\nCache Rápido de Saldo (60s)")]
-    end
-
-    subgraph Microservices["Microsserviços de Domínio (gRPC / HTTP/2)"]
-        UserSvc["UfgPay.UserService (:5001)\nAutenticação & Identidade Acadêmica"]
-        WalletSvc["UfgPay.WalletService (:5002)\nSaldos em Centavos (int64) & PIX"]
-        CampusSvc["UfgPay.CampusService (:5003)\nCatálogo RU e Emissão de Vouchers"]
-    end
-
-    subgraph Data["Bancos de Dados Isolados (Cloud SQL PostgreSQL 17)"]
-        DBUser[("ufg_user_db\n(Tabela: usuarios)")]
-        DBWallet[("ufg_wallet_db\n(Tabelas: contas, transacoes)\nsaldo_centavos >= 0")]
-        DBCampus[("ufg_campus_db\n(Tabelas: servicos, pedidos_consumo)")]
-    end
-
-    SPA -->|HTTP REST / JSON / Bearer JWT| Gateway
-    Gateway <-->|Cache & Invalidação Proativa| Redis
-
-    Gateway -->|gRPC / Protobuf| UserSvc
-    Gateway -->|gRPC / Protobuf| WalletSvc
-    Gateway -->|gRPC / Protobuf| CampusSvc
-
-    UserSvc -->|EF Core Npgsql| DBUser
-    WalletSvc -->|EF Core Npgsql| DBWallet
-    CampusSvc -->|EF Core Npgsql| DBCampus
-```
-
-### Destaques Arquiteturais:
-1. **Database-per-Service:** Nenhuma tabela é compartilhada entre microsserviços. O isolamento é total entre identidade acadêmica (`ufg_user_db`), transações financeiras (`ufg_wallet_db`) e consumo do RU (`ufg_campus_db`).
-2. **Comunicação Binária gRPC (HTTP/2):** O Gateway orquestra chamadas com contratos tipados e serialização Protocol Buffers (`.proto3`), proporcionando altíssima performance e baixíssima latência.
-3. **Precisão Financeira Estrita:** Saldos e valores manipulados exclusivamente em **centavos (`int64` / `BIGINT`)** com constraint no PostgreSQL (`saldo_centavos >= 0`), eliminando qualquer risco de inconsistência por ponto flutuante.
-4. **Resiliência com Padrão de Compensação:** Se o débito ocorrer no `WalletService` mas a geração do voucher falhar no `CampusService`, o Gateway realiza estorno automático do valor para a carteira do estudante.
+![Arquitetura do Sistema UFGPay](./arc-ufgpay.jpg)
 
 ---
 
