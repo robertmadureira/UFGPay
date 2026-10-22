@@ -2,13 +2,14 @@ import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { TopupPixRequestPayload, TopupPixResponsePayload, WalletBalance } from '../models/wallet.model';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class WalletService {
   private readonly http = inject(HttpClient);
-  private readonly API_URL = '/api/v1/wallet';
+  private readonly API_URL = `${environment.apiUrl}/api/v1/wallet`;
 
   private readonly _balance = signal<WalletBalance | null>(null);
   public readonly balance = this._balance.asReadonly();

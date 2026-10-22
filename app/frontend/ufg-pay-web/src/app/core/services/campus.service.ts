@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { CampusServiceItem, CheckoutRequestPayload, CheckoutResponsePayload } from '../models/campus.model';
 import { WalletService } from './wallet.service';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -10,7 +11,7 @@ import { WalletService } from './wallet.service';
 export class CampusService {
   private readonly http = inject(HttpClient);
   private readonly walletService = inject(WalletService);
-  private readonly API_URL = '/api/v1/campus';
+  private readonly API_URL = `${environment.apiUrl}/api/v1/campus`;
 
   private readonly _services = signal<CampusServiceItem[]>([]);
   public readonly services = this._services.asReadonly();

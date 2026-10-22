@@ -1,0 +1,19 @@
+# Angular build and dependencies
+/dist
+/tmp
+/out-tsc
+/.angular
+node_modules/
+
+# IDEs and editors
+.idea/
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# System Files
+.DS_Store
+Thumbs.db

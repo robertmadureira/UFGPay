@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
 import { AuthSession, LoginCredentials, RegisterData } from '../models/auth.model';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -11,7 +12,7 @@ export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
 
-  private readonly API_URL = '/api/v1/auth';
+  private readonly API_URL = `${environment.apiUrl}/api/v1/auth`;
   private readonly TOKEN_KEY = 'ufgpay_access_token';
   private readonly USER_KEY = 'ufgpay_user_session';
 
