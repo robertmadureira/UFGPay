@@ -1,0 +1,261 @@
+name: Deploy to Production (GCP)
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GCP_REGION: ${{ vars.GCP_REGION || 'southamerica-east1' }}
+  GCP_ZONE: ${{ vars.GCP_ZONE || 'southamerica-east1-a' }}
+
+jobs:
+  # ===========================================================================
+  # 1. INFRAESTRUTURA COMO CÓDIGO (TERRAFORM)
+  # ===========================================================================
+  terraform-apply:
+    name: Provisionar Infraestrutura (Terraform)
+    runs-on: ubuntu-latest
+    outputs:
+      artifact_registry_repo: ${{ steps.tf_outputs.outputs.artifact_registry_repo }}
+      gke_cluster_name: ${{ steps.tf_outputs.outputs.gke_cluster_name }}
+      frontend_bucket_name: ${{ steps.tf_outputs.outputs.frontend_bucket_name }}
+      frontend_url: ${{ steps.tf_outputs.outputs.frontend_url }}
+      cloud_sql_private_ip: ${{ steps.tf_outputs.outputs.cloud_sql_private_ip }}
+      redis_host: ${{ steps.tf_outputs.outputs.redis_host }}
+      redis_port: ${{ steps.tf_outputs.outputs.redis_port }}
+      cloud_sql_user: ${{ steps.tf_outputs.outputs.cloud_sql_user }}
+      secret_db_password_id: ${{ steps.tf_outputs.outputs.secret_db_password_id }}
+      secret_jwt_id: ${{ steps.tf_outputs.outputs.secret_jwt_id }}
+    steps:
+      - name: Checkout do Repositório
+        uses: actions/checkout@v4
+
+      - name: Autenticação no Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Configurar Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configurar Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.15.8
+
+      - name: Terraform Init
+        working-directory: infra
+        run: terraform init
+
+      - name: Terraform Apply
+        working-directory: infra
+        run: |
+          terraform apply -auto-approve \
+            -var="project_id=${{ env.GCP_PROJECT_ID }}" \
+            -var="region=${{ env.GCP_REGION }}" \
+            -var="zone=${{ env.GCP_ZONE }}" \
+            -var="environment=prod" \
+            -var="db_deletion_protection=false"
+
+      - name: Capturar Outputs do Terraform
+        id: tf_outputs
+        working-directory: infra
+        run: |
+          echo "artifact_registry_repo=$(terraform output -raw artifact_registry_repo)" >> "$GITHUB_OUTPUT"
+          echo "gke_cluster_name=$(terraform output -raw gke_cluster_name)" >> "$GITHUB_OUTPUT"
+          echo "frontend_bucket_name=$(terraform output -raw frontend_bucket_name)" >> "$GITHUB_OUTPUT"
+          echo "frontend_url=$(terraform output -raw frontend_url)" >> "$GITHUB_OUTPUT"
+          echo "cloud_sql_private_ip=$(terraform output -raw cloud_sql_private_ip)" >> "$GITHUB_OUTPUT"
+          echo "redis_host=$(terraform output -raw redis_host)" >> "$GITHUB_OUTPUT"
+          echo "redis_port=$(terraform output -raw redis_port)" >> "$GITHUB_OUTPUT"
+          echo "cloud_sql_user=$(terraform output -raw cloud_sql_user)" >> "$GITHUB_OUTPUT"
+          echo "secret_db_password_id=$(terraform output -raw secret_db_password_id)" >> "$GITHUB_OUTPUT"
+          echo "secret_jwt_id=$(terraform output -raw secret_jwt_id)" >> "$GITHUB_OUTPUT"
+
+  # ===========================================================================
+  # 2. BUILD E DEPLOY DOS MICROSSERVIÇOS (BACKEND GKE)
+  # ===========================================================================
+  deploy-backend:
+    name: Build & Deploy Backend (GKE)
+    needs: terraform-apply
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do Repositório
+        uses: actions/checkout@v4
+
+      - name: Autenticação no Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Configurar Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Instalar gke-gcloud-auth-plugin & Kubectl
+        run: |
+          gcloud components install gke-gcloud-auth-plugin kubectl --quiet
+
+      - name: Autenticar Docker no Artifact Registry
+        run: |
+          gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - name: Build & Push das Imagens Docker
+        env:
+          REPO: ${{ needs.terraform-apply.outputs.artifact_registry_repo }}
+          SHA: ${{ github.sha }}
+        run: |
+          # 1. UserService
+          docker build -t $REPO/user-service:$SHA -t $REPO/user-service:latest -f app/backend/services/UfgPay.UserService/Dockerfile .
+          docker push $REPO/user-service:$SHA
+          docker push $REPO/user-service:latest
+
+          # 2. WalletService
+          docker build -t $REPO/wallet-service:$SHA -t $REPO/wallet-service:latest -f app/backend/services/UfgPay.WalletService/Dockerfile .
+          docker push $REPO/wallet-service:$SHA
+          docker push $REPO/wallet-service:latest
+
+          # 3. CampusService
+          docker build -t $REPO/campus-service:$SHA -t $REPO/campus-service:latest -f app/backend/services/UfgPay.CampusService/Dockerfile .
+          docker push $REPO/campus-service:$SHA
+          docker push $REPO/campus-service:latest
+
+          # 4. API Gateway
+          docker build -t $REPO/gateway:$SHA -t $REPO/gateway:latest -f app/backend/gateway/UfgPay.Gateway/Dockerfile .
+          docker push $REPO/gateway:$SHA
+          docker push $REPO/gateway:latest
+
+      - name: Conectar ao Cluster GKE
+        run: |
+          gcloud container clusters get-credentials ${{ needs.terraform-apply.outputs.gke_cluster_name }} \
+            --region ${{ env.GCP_REGION }} \
+            --project ${{ env.GCP_PROJECT_ID }}
+
+      - name: Obter Segredos do Secret Manager
+        id: secrets
+        run: |
+          DB_PASS=$(gcloud secrets versions access latest --secret="${{ needs.terraform-apply.outputs.secret_db_password_id }}" --project=${{ env.GCP_PROJECT_ID }})
+          JWT_SEC=$(gcloud secrets versions access latest --secret="${{ needs.terraform-apply.outputs.secret_jwt_id }}" --project=${{ env.GCP_PROJECT_ID }})
+          echo "::add-mask::$DB_PASS"
+          echo "::add-mask::$JWT_SEC"
+          echo "db_pass=$DB_PASS" >> "$GITHUB_OUTPUT"
+          echo "jwt_sec=$JWT_SEC" >> "$GITHUB_OUTPUT"
+
+      - name: Aplicar Namespace e ConfigMap
+        run: |
+          kubectl apply -f infra/k8s/namespace.yaml
+          kubectl apply -f infra/k8s/configmap.yaml
+
+      - name: Configurar Kubernetes Secrets
+        env:
+          DB_HOST: ${{ needs.terraform-apply.outputs.cloud_sql_private_ip }}
+          DB_USER: ${{ needs.terraform-apply.outputs.cloud_sql_user }}
+          DB_PASS: ${{ steps.secrets.outputs.db_pass }}
+          REDIS_HOST: ${{ needs.terraform-apply.outputs.redis_host }}
+          REDIS_PORT: ${{ needs.terraform-apply.outputs.redis_port }}
+          JWT_SEC: ${{ steps.secrets.outputs.jwt_sec }}
+        run: |
+          kubectl create secret generic ufgpay-db-secrets \
+            --namespace ufgpay \
+            --from-literal=DB_HOST="$DB_HOST" \
+            --from-literal=DB_USER="$DB_USER" \
+            --from-literal=DB_PASSWORD="$DB_PASS" \
+            --from-literal=USER_DB_CONNECTION="Host=$DB_HOST;Port=5432;Database=ufg_user_db;Username=$DB_USER;Password=$DB_PASS" \
+            --from-literal=WALLET_DB_CONNECTION="Host=$DB_HOST;Port=5432;Database=ufg_wallet_db;Username=$DB_USER;Password=$DB_PASS" \
+            --from-literal=CAMPUS_DB_CONNECTION="Host=$DB_HOST;Port=5432;Database=ufg_campus_db;Username=$DB_USER;Password=$DB_PASS" \
+            --from-literal=REDIS_CONNECTION="$REDIS_HOST:$REDIS_PORT" \
+            --from-literal=JWT_SECRET="$JWT_SEC" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Executar Migrations e Seed nos Bancos Postgres
+        run: |
+          # Deleta job anterior se existir e cria novo job de migration
+          kubectl delete job ufgpay-db-migration-job -n ufgpay --ignore-not-found
+          kubectl apply -f infra/k8s/db-init-job.yaml
+          kubectl wait --for=condition=complete --timeout=120s job/ufgpay-db-migration-job -n ufgpay
+
+      - name: Atualizar Imagens e Aplicar Deployments K8s
+        env:
+          REPO: ${{ needs.terraform-apply.outputs.artifact_registry_repo }}
+          SHA: ${{ github.sha }}
+        run: |
+          # Substitui a tag da imagem nos manifestos
+          sed -i "s|REGION-docker.pkg.dev/PROJECT_ID/REPO_NAME|$REPO|g" infra/k8s/*.yaml
+          sed -i "s|IMAGE_TAG|$SHA|g" infra/k8s/*.yaml
+
+          kubectl apply -f infra/k8s/user-service.yaml
+          kubectl apply -f infra/k8s/wallet-service.yaml
+          kubectl apply -f infra/k8s/campus-service.yaml
+          kubectl apply -f infra/k8s/gateway.yaml
+          kubectl apply -f infra/k8s/ingress.yaml
+
+      - name: Validar Rollout dos Microsserviços
+        run: |
+          kubectl rollout status deployment/ufgpay-user-service -n ufgpay --timeout=180s
+          kubectl rollout status deployment/ufgpay-wallet-service -n ufgpay --timeout=180s
+          kubectl rollout status deployment/ufgpay-campus-service -n ufgpay --timeout=180s
+          kubectl rollout status deployment/ufgpay-gateway -n ufgpay --timeout=180s
+
+  # ===========================================================================
+  # 3. BUILD E DEPLOY DO FRONTEND (CLOUD STORAGE + CLOUD CDN)
+  # ===========================================================================
+  deploy-frontend:
+    name: Build & Deploy Frontend (Cloud Storage + CDN)
+    needs: terraform-apply
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do Repositório
+        uses: actions/checkout@v4
+
+      - name: Autenticação no Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Configurar Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configurar Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Instalar Dependências e Compilar Angular (Produção)
+        working-directory: app/frontend/ufg-pay-web
+        run: |
+          npm install
+          npm run build -- --configuration production
+
+      - name: Sincronizar Arquivos no Google Cloud Storage Bucket
+        env:
+          BUCKET_NAME: ${{ needs.terraform-apply.outputs.frontend_bucket_name }}
+        run: |
+          echo "Publicando no bucket: gs://$BUCKET_NAME"
+          if [ -d "app/frontend/ufg-pay-web/dist/ufg-pay-web/browser" ]; then
+            SRC_DIR="app/frontend/ufg-pay-web/dist/ufg-pay-web/browser"
+          else
+            SRC_DIR="app/frontend/ufg-pay-web/dist/ufg-pay-web"
+          fi
+          echo "Diretório de origem: $SRC_DIR"
+          gcloud storage rsync -r -d "$SRC_DIR" "gs://$BUCKET_NAME"
+
+      - name: Invalidar Cache da Google Cloud CDN
+        run: |
+          echo "Invalidando cache CDN para propagação global instantânea..."
+          gcloud compute url-maps invalidate-cdn-cache ufgpay-prod-frontend-url-map \
+            --path="/*" \
+            --project=${{ env.GCP_PROJECT_ID }} \
+            --async
+
+      - name: URL de Produção do Frontend
+        run: |
+          echo "=========================================================="
+          echo "🚀 Frontend publicado com sucesso na Google Cloud CDN!"
+          echo "🌐 Endereço Público: ${{ needs.terraform-apply.outputs.frontend_url }}"
+          echo "=========================================================="

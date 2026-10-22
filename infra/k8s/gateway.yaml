@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ufgpay-gateway
+  namespace: ufgpay
+  labels:
+    app: ufgpay-gateway
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ufgpay-gateway
+  template:
+    metadata:
+      labels:
+        app: ufgpay-gateway
+    spec:
+      containers:
+        - name: gateway
+          image: REGION-docker.pkg.dev/PROJECT_ID/REPO_NAME/gateway:IMAGE_TAG
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5000
+              name: http
+          env:
+            - name: ASPNETCORE_URLS
+              valueFrom:
+                configMapKeyRef:
+                  name: ufgpay-config
+                  key: ASPNETCORE_URLS_GATEWAY
+            - name: Services__UserService
+              valueFrom:
+                configMapKeyRef:
+                  name: ufgpay-config
+                  key: SERVICES_USER_SERVICE
+            - name: Services__WalletService
+              valueFrom:
+                configMapKeyRef:
+                  name: ufgpay-config
+                  key: SERVICES_WALLET_SERVICE
+            - name: Services__CampusService
+              valueFrom:
+                configMapKeyRef:
+                  name: ufgpay-config
+                  key: SERVICES_CAMPUS_SERVICE
+            - name: ConnectionStrings__Redis
+              valueFrom:
+                secretKeyRef:
+                  name: ufgpay-db-secrets
+                  key: REDIS_CONNECTION
+            - name: Jwt__Secret
+              valueFrom:
+                secretKeyRef:
+                  name: ufgpay-db-secrets
+                  key: JWT_SECRET
+          resources:
+            requests:
+              cpu: "150m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ufgpay-gateway
+  namespace: ufgpay
+  labels:
+    app: ufgpay-gateway
+spec:
+  type: NodePort
+  ports:
+    - port: 5000
+      targetPort: 5000
+      name: http
+  selector:
+    app: ufgpay-gateway

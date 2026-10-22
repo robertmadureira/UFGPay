@@ -1,0 +1,125 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ufgpay-db-migration-job
+  namespace: ufgpay
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      name: ufgpay-db-migration
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: db-migrator
+          image: postgres:17-alpine
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "Iniciando verificacao e migrations dos 3 bancos Postgres..."
+              
+              # UserService DB
+              PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -U $DB_USER -d ufg_user_db -c '
+              CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+              CREATE TABLE IF NOT EXISTS usuarios (
+                  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+                  matricula VARCHAR(20) NOT NULL,
+                  nome VARCHAR(150) NOT NULL,
+                  email VARCHAR(150) NOT NULL,
+                  senha_hash VARCHAR(255) NOT NULL,
+                  tipo_vinculo VARCHAR(30) NOT NULL,
+                  ativo BOOLEAN NOT NULL DEFAULT TRUE,
+                  criado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+              );
+              CREATE UNIQUE INDEX IF NOT EXISTS idx_usuarios_matricula ON usuarios(matricula);
+              CREATE UNIQUE INDEX IF NOT EXISTS idx_usuarios_email ON usuarios(email);
+              '
+              
+              # WalletService DB
+              PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -U $DB_USER -d ufg_wallet_db -c '
+              CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+              CREATE TABLE IF NOT EXISTS contas (
+                  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+                  user_id UUID NOT NULL,
+                  saldo_centavos BIGINT NOT NULL DEFAULT 0,
+                  bloqueada BOOLEAN NOT NULL DEFAULT FALSE,
+                  atualizado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                  CONSTRAINT chk_saldo_positivo CHECK (saldo_centavos >= 0)
+              );
+              CREATE TABLE IF NOT EXISTS transacoes (
+                  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+                  user_id UUID NOT NULL,
+                  tipo VARCHAR(20) NOT NULL,
+                  valor_centavos BIGINT NOT NULL,
+                  descricao VARCHAR(255) NOT NULL,
+                  criado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+              );
+              CREATE UNIQUE INDEX IF NOT EXISTS idx_contas_user_id ON contas(user_id);
+              CREATE INDEX IF NOT EXISTS idx_transacoes_user_id ON transacoes(user_id);
+              '
+
+              # CampusService DB
+              PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -U $DB_USER -d ufg_campus_db -c '
+              CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+              CREATE TABLE IF NOT EXISTS estabelecimentos (
+                  id VARCHAR(50) PRIMARY KEY,
+                  nome VARCHAR(100) NOT NULL,
+                  categoria VARCHAR(50) NOT NULL,
+                  ativo BOOLEAN NOT NULL DEFAULT TRUE
+              );
+              CREATE TABLE IF NOT EXISTS servicos_campus (
+                  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+                  estabelecimento_id VARCHAR(50) REFERENCES estabelecimentos(id),
+                  nome VARCHAR(100) NOT NULL,
+                  preco_centavos BIGINT NOT NULL,
+                  ativo BOOLEAN NOT NULL DEFAULT TRUE
+              );
+              CREATE TABLE IF NOT EXISTS pedidos_consumo (
+                  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+                  user_id UUID NOT NULL,
+                  servico_id UUID REFERENCES servicos_campus(id),
+                  valor_centavos BIGINT NOT NULL,
+                  status VARCHAR(20) NOT NULL,
+                  codigo_voucher VARCHAR(64) NOT NULL,
+                  criado_em TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+              );
+              CREATE INDEX IF NOT EXISTS idx_pedidos_user_id ON pedidos_consumo(user_id);
+              CREATE UNIQUE INDEX IF NOT EXISTS idx_pedidos_voucher ON pedidos_consumo(codigo_voucher);
+              '
+
+              # Seed Catálogo do Campus
+              PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -U $DB_USER -d ufg_campus_db -c "
+              INSERT INTO estabelecimentos (id, nome, categoria, ativo) VALUES
+              ('ru_samambaia', 'Restaurante Universitário - Câmpus Samambaia', 'Alimentação', true),
+              ('ru_colemar', 'Restaurante Universitário - Câmpus Colemar Natal e Silva', 'Alimentação', true),
+              ('reprografia_central', 'Reprografia Central (Xerox & Gráfica)', 'Serviços Gráficos', true),
+              ('lanchonete_inf', 'Lanchonete do Instituto de Informática', 'Alimentação', true)
+              ON CONFLICT (id) DO NOTHING;
+
+              INSERT INTO servicos_campus (id, estabelecimento_id, nome, preco_centavos, ativo) VALUES
+              ('a0000000-0000-0000-0000-000000000001', 'ru_samambaia', 'Refeição RU - Almoço / Jantar (Estudante)', 400, true),
+              ('a0000000-0000-0000-0000-000000000011', 'ru_samambaia', 'Café da Manhã RU - Estudante', 250, true),
+              ('a0000000-0000-0000-0000-000000000002', 'ru_colemar', 'Refeição RU - Almoço / Jantar (Estudante)', 400, true),
+              ('a0000000-0000-0000-0000-000000000003', 'reprografia_central', 'Impressão / Cópia P&B (Unidade)', 25, true),
+              ('a0000000-0000-0000-0000-000000000005', 'lanchonete_inf', 'Café Expresso 50ml', 350, true),
+              ('a0000000-0000-0000-0000-000000000016', 'lanchonete_inf', 'Pão de Queijo Tradicional Goiano', 450, true)
+              ON CONFLICT (id) DO NOTHING;
+              "
+
+              echo "Migrations e Seeds executados com sucesso!"
+          env:
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: ufgpay-db-secrets
+                  key: DB_HOST
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: ufgpay-db-secrets
+                  key: DB_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ufgpay-db-secrets
+                  key: DB_PASSWORD

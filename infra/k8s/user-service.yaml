@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ufgpay-user-service
+  namespace: ufgpay
+  labels:
+    app: ufgpay-user-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ufgpay-user-service
+  template:
+    metadata:
+      labels:
+        app: ufgpay-user-service
+    spec:
+      containers:
+        - name: user-service
+          image: REGION-docker.pkg.dev/PROJECT_ID/REPO_NAME/user-service:IMAGE_TAG
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5001
+              name: grpc
+          env:
+            - name: ASPNETCORE_URLS
+              valueFrom:
+                configMapKeyRef:
+                  name: ufgpay-config
+                  key: ASPNETCORE_URLS_USER
+            - name: ConnectionStrings__DefaultConnection
+              valueFrom:
+                secretKeyRef:
+                  name: ufgpay-db-secrets
+                  key: USER_DB_CONNECTION
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ufgpay-user-service
+  namespace: ufgpay
+  labels:
+    app: ufgpay-user-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5001
+      targetPort: 5001
+      name: grpc
+      appProtocol: grpc
+  selector:
+    app: ufgpay-user-service

@@ -1,0 +1,27 @@
+# =============================================================================
+# Exemplo de Variáveis do Terraform para o UFG Pay no Google Cloud
+# Renomeie este arquivo para 'terraform.tfvars' e configure com suas credenciais.
+# =============================================================================
+
+project_id             = "seu-gcp-project-id"
+region                 = "southamerica-east1"    # São Paulo, Brasil
+zone                   = "southamerica-east1-a"
+environment            = "prod"
+
+# Networking
+vpc_subnet_cidr        = "10.10.0.0/20"
+pods_subnet_cidr       = "10.20.0.0/16"
+services_subnet_cidr   = "10.30.0.0/20"
+
+# Cloud SQL (PostgreSQL 17)
+db_tier                = "db-custom-2-7680"     # 2 vCPUs, 7.5 GB RAM
+db_version             = "POSTGRES_17"
+db_disk_size_gb        = 20
+db_deletion_protection = false                  # Altere para true em produção estrita
+
+# Memorystore Redis
+redis_memory_size_gb   = 1
+redis_tier             = "BASIC"                # Use STANDARD_HA para alta disponibilidade em produção
+
+# GKE
+enable_gke_autopilot   = true
