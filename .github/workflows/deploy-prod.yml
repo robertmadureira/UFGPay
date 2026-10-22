@@ -193,40 +193,47 @@ jobs:
 
       - name: Build & Push das Imagens Docker
         env:
-          REPO: ${{ needs.terraform-apply.outputs.artifact_registry_repo }}
+          OUTPUT_REPO: ${{ needs.terraform-apply.outputs.artifact_registry_repo }}
           SHA: ${{ github.sha }}
         run: |
+          REPO="${OUTPUT_REPO:-${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ufgpay-prod-docker-repo}"
+          echo "Utilizando Repositorio Docker: $REPO"
+
           # 1. UserService
-          docker build -t $REPO/user-service:$SHA -t $REPO/user-service:latest -f app/backend/services/UfgPay.UserService/Dockerfile .
-          docker push $REPO/user-service:$SHA
-          docker push $REPO/user-service:latest
+          docker build -t "$REPO/user-service:$SHA" -t "$REPO/user-service:latest" -f app/backend/services/UfgPay.UserService/Dockerfile .
+          docker push "$REPO/user-service:$SHA"
+          docker push "$REPO/user-service:latest"
 
           # 2. WalletService
-          docker build -t $REPO/wallet-service:$SHA -t $REPO/wallet-service:latest -f app/backend/services/UfgPay.WalletService/Dockerfile .
-          docker push $REPO/wallet-service:$SHA
-          docker push $REPO/wallet-service:latest
+          docker build -t "$REPO/wallet-service:$SHA" -t "$REPO/wallet-service:latest" -f app/backend/services/UfgPay.WalletService/Dockerfile .
+          docker push "$REPO/wallet-service:$SHA"
+          docker push "$REPO/wallet-service:latest"
 
           # 3. CampusService
-          docker build -t $REPO/campus-service:$SHA -t $REPO/campus-service:latest -f app/backend/services/UfgPay.CampusService/Dockerfile .
-          docker push $REPO/campus-service:$SHA
-          docker push $REPO/campus-service:latest
+          docker build -t "$REPO/campus-service:$SHA" -t "$REPO/campus-service:latest" -f app/backend/services/UfgPay.CampusService/Dockerfile .
+          docker push "$REPO/campus-service:$SHA"
+          docker push "$REPO/campus-service:latest"
 
           # 4. API Gateway
-          docker build -t $REPO/gateway:$SHA -t $REPO/gateway:latest -f app/backend/gateway/UfgPay.Gateway/Dockerfile .
-          docker push $REPO/gateway:$SHA
-          docker push $REPO/gateway:latest
+          docker build -t "$REPO/gateway:$SHA" -t "$REPO/gateway:latest" -f app/backend/gateway/UfgPay.Gateway/Dockerfile .
+          docker push "$REPO/gateway:$SHA"
+          docker push "$REPO/gateway:latest"
 
       - name: Conectar ao Cluster GKE
+        env:
+          CLUSTER: ${{ needs.terraform-apply.outputs.gke_cluster_name }}
         run: |
-          gcloud container clusters get-credentials ${{ needs.terraform-apply.outputs.gke_cluster_name }} \
+          GKE_NAME="${CLUSTER:-ufgpay-prod-gke-cluster}"
+          echo "Conectando ao cluster GKE: $GKE_NAME"
+          gcloud container clusters get-credentials "$GKE_NAME" \
             --region ${{ env.GCP_REGION }} \
             --project ${{ env.GCP_PROJECT_ID }}
 
       - name: Obter Segredos do Secret Manager
         id: secrets
         run: |
-          DB_PASS=$(gcloud secrets versions access latest --secret="${{ needs.terraform-apply.outputs.secret_db_password_id }}" --project=${{ env.GCP_PROJECT_ID }})
-          JWT_SEC=$(gcloud secrets versions access latest --secret="${{ needs.terraform-apply.outputs.secret_jwt_id }}" --project=${{ env.GCP_PROJECT_ID }})
+          DB_PASS=$(gcloud secrets versions access latest --secret="ufgpay-prod-db-password" --project=${{ env.GCP_PROJECT_ID }})
+          JWT_SEC=$(gcloud secrets versions access latest --secret="ufgpay-prod-jwt-secret" --project=${{ env.GCP_PROJECT_ID }})
           echo "::add-mask::$DB_PASS"
           echo "::add-mask::$JWT_SEC"
           echo "db_pass=$DB_PASS" >> "$GITHUB_OUTPUT"
@@ -239,13 +246,19 @@ jobs:
 
       - name: Configurar Kubernetes Secrets
         env:
-          DB_HOST: ${{ needs.terraform-apply.outputs.cloud_sql_private_ip }}
-          DB_USER: ${{ needs.terraform-apply.outputs.cloud_sql_user }}
+          SQL_IP: ${{ needs.terraform-apply.outputs.cloud_sql_private_ip }}
+          REDIS_IP: ${{ needs.terraform-apply.outputs.redis_host }}
+          REDIS_P: ${{ needs.terraform-apply.outputs.redis_port }}
           DB_PASS: ${{ steps.secrets.outputs.db_pass }}
-          REDIS_HOST: ${{ needs.terraform-apply.outputs.redis_host }}
-          REDIS_PORT: ${{ needs.terraform-apply.outputs.redis_port }}
           JWT_SEC: ${{ steps.secrets.outputs.jwt_sec }}
         run: |
+          DB_HOST="${SQL_IP:-$(gcloud sql instances describe ufgpay-prod-postgres17 --project=${{ env.GCP_PROJECT_ID }} --format='value(ipAddresses.filter(type:PRIVATE).ipAddress)')}"
+          REDIS_HOST="${REDIS_IP:-$(gcloud redis instances describe ufgpay-prod-redis --region=${{ env.GCP_REGION }} --project=${{ env.GCP_PROJECT_ID }} --format='value(host)')}"
+          REDIS_PORT="${REDIS_P:-6379}"
+          DB_USER="ufgpay_app"
+
+          echo "Configurando secrets com DB_HOST=$DB_HOST e REDIS_HOST=$REDIS_HOST"
+
           kubectl create secret generic ufgpay-db-secrets \
             --namespace ufgpay \
             --from-literal=DB_HOST="$DB_HOST" \
@@ -267,9 +280,10 @@ jobs:
 
       - name: Atualizar Imagens e Aplicar Deployments K8s
         env:
-          REPO: ${{ needs.terraform-apply.outputs.artifact_registry_repo }}
+          OUTPUT_REPO: ${{ needs.terraform-apply.outputs.artifact_registry_repo }}
           SHA: ${{ github.sha }}
         run: |
+          REPO="${OUTPUT_REPO:-${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ufgpay-prod-docker-repo}"
           # Substitui a tag da imagem nos manifestos
           sed -i "s|REGION-docker.pkg.dev/PROJECT_ID/REPO_NAME|$REPO|g" infra/k8s/*.yaml
           sed -i "s|IMAGE_TAG|$SHA|g" infra/k8s/*.yaml
@@ -319,8 +333,9 @@ jobs:
 
       - name: Sincronizar Arquivos no Google Cloud Storage Bucket
         env:
-          BUCKET_NAME: ${{ needs.terraform-apply.outputs.frontend_bucket_name }}
+          OUT_BUCKET: ${{ needs.terraform-apply.outputs.frontend_bucket_name }}
         run: |
+          BUCKET_NAME="${OUT_BUCKET:-ufgpay-prod-frontend-static-${{ env.GCP_PROJECT_ID }}}"
           echo "Publicando no bucket: gs://$BUCKET_NAME"
           if [ -d "app/frontend/ufg-pay-web/dist/ufg-pay-web/browser" ]; then
             SRC_DIR="app/frontend/ufg-pay-web/dist/ufg-pay-web/browser"
@@ -328,7 +343,7 @@ jobs:
             SRC_DIR="app/frontend/ufg-pay-web/dist/ufg-pay-web"
           fi
           echo "Diretório de origem: $SRC_DIR"
-          gcloud storage rsync -r -d "$SRC_DIR" "gs://$BUCKET_NAME"
+          gcloud storage cp -r "$SRC_DIR/*" "gs://$BUCKET_NAME/"
 
       - name: Invalidar Cache da Google Cloud CDN
         run: |
