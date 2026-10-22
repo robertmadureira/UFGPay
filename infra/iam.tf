@@ -7,6 +7,8 @@ resource "google_service_account" "gke_sa" {
   account_id   = "${local.name_prefix}-gke-sa"
   display_name = "Service Account para o cluster GKE do UFG Pay"
   project      = var.project_id
+
+  depends_on = [google_project_service.apis["iam.googleapis.com"]]
 }
 
 # Permissões do GKE para métricas e logs
@@ -39,6 +41,8 @@ resource "google_service_account" "app_sa" {
   account_id   = "${local.name_prefix}-app-sa"
   display_name = "Service Account dos Microsservicos UFG Pay"
   project      = var.project_id
+
+  depends_on = [google_project_service.apis["iam.googleapis.com"]]
 }
 
 # Permite que os microsserviços acessem o Cloud SQL

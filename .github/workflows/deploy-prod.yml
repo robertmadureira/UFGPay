@@ -45,6 +45,22 @@ jobs:
       - name: Configurar Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
+      - name: Habilitar APIs Essenciais do Google Cloud
+        run: |
+          echo "Habilitando APIs fundamentais no GCP..."
+          gcloud services enable \
+            cloudresourcemanager.googleapis.com \
+            serviceusage.googleapis.com \
+            iam.googleapis.com \
+            compute.googleapis.com \
+            container.googleapis.com \
+            sqladmin.googleapis.com \
+            redis.googleapis.com \
+            servicenetworking.googleapis.com \
+            artifactregistry.googleapis.com \
+            secretmanager.googleapis.com \
+            --project=${{ env.GCP_PROJECT_ID }}
+
       - name: Configurar Terraform
         uses: hashicorp/setup-terraform@v3
         with:

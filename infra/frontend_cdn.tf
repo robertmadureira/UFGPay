@@ -48,6 +48,8 @@ resource "google_compute_backend_bucket" "frontend_cdn" {
   enable_cdn  = true
   project     = var.project_id
 
+  depends_on = [google_project_service.apis["compute.googleapis.com"]]
+
   cdn_policy {
     cache_mode        = "CACHE_ALL_STATIC"
     default_ttl       = 3600 # 1 hora de cache padrão nos pontos de presença mundiais da Google
@@ -73,6 +75,8 @@ resource "google_compute_url_map" "frontend_url_map" {
 resource "google_compute_global_address" "frontend_ip" {
   name    = "${local.name_prefix}-frontend-global-ip"
   project = var.project_id
+
+  depends_on = [google_project_service.apis["compute.googleapis.com"]]
 }
 
 # -----------------------------------------------------------------------------
