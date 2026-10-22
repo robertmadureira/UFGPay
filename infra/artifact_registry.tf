@@ -6,7 +6,7 @@ resource "google_artifact_registry_repository" "docker_repo" {
   provider = google-beta
 
   location      = var.region
-  repository_id = "${locals.name_prefix}-docker-repo"
+  repository_id = "${local.name_prefix}-docker-repo"
   description   = "Repositorio Docker para imagens dos microsservicos e frontend do UFG Pay"
   format        = "DOCKER"
   project       = var.project_id

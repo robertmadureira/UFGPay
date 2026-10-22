@@ -3,7 +3,7 @@
 # =============================================================================
 
 resource "google_redis_instance" "cache" {
-  name           = "${locals.name_prefix}-redis"
+  name           = "${local.name_prefix}-redis"
   tier           = var.redis_tier
   memory_size_gb = var.redis_memory_size_gb
 

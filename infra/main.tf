@@ -19,7 +19,7 @@ locals {
 }
 
 resource "google_project_service" "apis" {
-  for_each = toset(locals.services_to_enable)
+  for_each = toset(local.services_to_enable)
 
   project            = var.project_id
   service            = each.key

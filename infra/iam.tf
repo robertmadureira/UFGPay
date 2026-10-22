@@ -4,7 +4,7 @@
 
 # Service Account para os Nós e Pods do GKE
 resource "google_service_account" "gke_sa" {
-  account_id   = "${locals.name_prefix}-gke-sa"
+  account_id   = "${local.name_prefix}-gke-sa"
   display_name = "Service Account para o cluster GKE do UFG Pay"
   project      = var.project_id
 }
@@ -36,7 +36,7 @@ resource "google_project_iam_member" "gke_ar_reader" {
 
 # Service Account de Aplicação (Workload Identity para os Microsserviços)
 resource "google_service_account" "app_sa" {
-  account_id   = "${locals.name_prefix}-app-sa"
+  account_id   = "${local.name_prefix}-app-sa"
   display_name = "Service Account dos Microsservicos UFG Pay"
   project      = var.project_id
 }

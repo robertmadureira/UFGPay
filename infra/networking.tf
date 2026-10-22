@@ -3,7 +3,7 @@
 # =============================================================================
 
 resource "google_compute_network" "vpc" {
-  name                    = "${locals.name_prefix}-vpc"
+  name                    = "${local.name_prefix}-vpc"
   auto_create_subnetworks = false
   routing_mode            = "REGIONAL"
   project                 = var.project_id
@@ -12,7 +12,7 @@ resource "google_compute_network" "vpc" {
 }
 
 resource "google_compute_subnetwork" "subnet" {
-  name                     = "${locals.name_prefix}-subnet-${var.region}"
+  name                     = "${local.name_prefix}-subnet-${var.region}"
   ip_cidr_range            = var.vpc_subnet_cidr
   region                   = var.region
   network                  = google_compute_network.vpc.id
@@ -35,14 +35,14 @@ resource "google_compute_subnetwork" "subnet" {
 # =============================================================================
 
 resource "google_compute_router" "router" {
-  name    = "${locals.name_prefix}-nat-router"
+  name    = "${local.name_prefix}-nat-router"
   region  = var.region
   network = google_compute_network.vpc.id
   project = var.project_id
 }
 
 resource "google_compute_router_nat" "nat" {
-  name                               = "${locals.name_prefix}-nat-gateway"
+  name                               = "${local.name_prefix}-nat-gateway"
   router                             = google_compute_router.router.name
   region                             = var.region
   nat_ip_allocate_option             = "AUTO_ONLY"
@@ -60,7 +60,7 @@ resource "google_compute_router_nat" "nat" {
 # =============================================================================
 
 resource "google_compute_global_address" "private_ip_alloc" {
-  name          = "${locals.name_prefix}-private-ip-alloc"
+  name          = "${local.name_prefix}-private-ip-alloc"
   purpose       = "VPC_PEERING"
   address_type  = "INTERNAL"
   prefix_length = 16
@@ -84,7 +84,7 @@ resource "google_service_networking_connection" "private_vpc_connection" {
 
 # Tráfego interno entre os pods, microsserviços e gateways da VPC
 resource "google_compute_firewall" "allow_internal" {
-  name        = "${locals.name_prefix}-allow-internal"
+  name        = "${local.name_prefix}-allow-internal"
   network     = google_compute_network.vpc.id
   project     = var.project_id
   description = "Permite comunicacao interna irrestrita entre recursos da VPC"
@@ -110,7 +110,7 @@ resource "google_compute_firewall" "allow_internal" {
 
 # Health Checks do Google Cloud Load Balancer
 resource "google_compute_firewall" "allow_health_checks" {
-  name        = "${locals.name_prefix}-allow-health-checks"
+  name        = "${local.name_prefix}-allow-health-checks"
   network     = google_compute_network.vpc.id
   project     = var.project_id
   description = "Permite sondas de Health Check dos Load Balancers do Google Cloud"

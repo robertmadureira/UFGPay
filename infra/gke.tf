@@ -3,7 +3,7 @@
 # =============================================================================
 
 resource "google_container_cluster" "primary" {
-  name     = "${locals.name_prefix}-gke-cluster"
+  name     = "${local.name_prefix}-gke-cluster"
   location = var.region
   project  = var.project_id
 

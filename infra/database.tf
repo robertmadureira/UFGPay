@@ -3,7 +3,7 @@
 # =============================================================================
 
 resource "google_sql_database_instance" "postgres" {
-  name             = "${locals.name_prefix}-postgres17"
+  name             = "${local.name_prefix}-postgres17"
   database_version = var.db_version
   region           = var.region
   project          = var.project_id

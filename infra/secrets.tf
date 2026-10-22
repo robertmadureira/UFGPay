@@ -19,7 +19,7 @@ resource "random_password" "jwt_secret" {
 # Segredo: Senha do Banco PostgreSQL
 # -----------------------------------------------------------------------------
 resource "google_secret_manager_secret" "db_password" {
-  secret_id = "${locals.name_prefix}-db-password"
+  secret_id = "${local.name_prefix}-db-password"
   project   = var.project_id
 
   replication {
@@ -38,7 +38,7 @@ resource "google_secret_manager_secret_version" "db_password" {
 # Segredo: Chave JWT
 # -----------------------------------------------------------------------------
 resource "google_secret_manager_secret" "jwt_secret" {
-  secret_id = "${locals.name_prefix}-jwt-secret"
+  secret_id = "${local.name_prefix}-jwt-secret"
   project   = var.project_id
 
   replication {

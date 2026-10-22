@@ -7,7 +7,7 @@
 # 1. Bucket no Cloud Storage para os Arquivos Estáticos do Angular
 # -----------------------------------------------------------------------------
 resource "google_storage_bucket" "frontend" {
-  name          = "${locals.name_prefix}-frontend-static-${var.project_id}"
+  name          = "${local.name_prefix}-frontend-static-${var.project_id}"
   location      = var.region
   force_destroy = true
   project       = var.project_id
@@ -43,7 +43,7 @@ resource "google_storage_bucket_iam_member" "public_read" {
 # 2. Backend Bucket com Google Cloud CDN Habilitado (Borda Global Anycast)
 # -----------------------------------------------------------------------------
 resource "google_compute_backend_bucket" "frontend_cdn" {
-  name        = "${locals.name_prefix}-frontend-backend-bucket"
+  name        = "${local.name_prefix}-frontend-backend-bucket"
   bucket_name = google_storage_bucket.frontend.name
   enable_cdn  = true
   project     = var.project_id
@@ -62,7 +62,7 @@ resource "google_compute_backend_bucket" "frontend_cdn" {
 # 3. Mapeamento de Rotas (URL Map) do Load Balancer
 # -----------------------------------------------------------------------------
 resource "google_compute_url_map" "frontend_url_map" {
-  name            = "${locals.name_prefix}-frontend-url-map"
+  name            = "${local.name_prefix}-frontend-url-map"
   default_service = google_compute_backend_bucket.frontend_cdn.id
   project         = var.project_id
 }
@@ -71,7 +71,7 @@ resource "google_compute_url_map" "frontend_url_map" {
 # 4. Endereço IP Público Global Anycast (Distribuição Global de Borda)
 # -----------------------------------------------------------------------------
 resource "google_compute_global_address" "frontend_ip" {
-  name    = "${locals.name_prefix}-frontend-global-ip"
+  name    = "${local.name_prefix}-frontend-global-ip"
   project = var.project_id
 }
 
@@ -79,13 +79,13 @@ resource "google_compute_global_address" "frontend_ip" {
 # 5. Target HTTP Proxy e Forwarding Rule (Porta 80)
 # -----------------------------------------------------------------------------
 resource "google_compute_target_http_proxy" "frontend_http_proxy" {
-  name    = "${locals.name_prefix}-frontend-http-proxy"
+  name    = "${local.name_prefix}-frontend-http-proxy"
   url_map = google_compute_url_map.frontend_url_map.id
   project = var.project_id
 }
 
 resource "google_compute_global_forwarding_rule" "frontend_http_rule" {
-  name                  = "${locals.name_prefix}-frontend-http-forwarding-rule"
+  name                  = "${local.name_prefix}-frontend-http-forwarding-rule"
   ip_protocol           = "TCP"
   port_range            = "80"
   target                = google_compute_target_http_proxy.frontend_http_proxy.id
