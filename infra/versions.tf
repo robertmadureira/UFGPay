@@ -16,11 +16,9 @@ terraform {
     }
   }
 
-  # Descomente e configure para utilizar backend remoto no Cloud Storage (GCS)
-  # backend "gcs" {
-  #   bucket = "ufgpay-terraform-state"
-  #   prefix = "environments/prod"
-  # }
+  # Backend remoto no Google Cloud Storage (GCS)
+  # O bucket é configurado dinamicamente via -backend-config no CI/CD
+  backend "gcs" {}
 }
 
 provider "google" {

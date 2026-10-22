@@ -66,9 +66,67 @@ jobs:
         with:
           terraform_version: 1.15.8
 
-      - name: Terraform Init
+      - name: Inicializar Backend Remoto no Cloud Storage & Terraform Init
         working-directory: infra
-        run: terraform init
+        run: |
+          echo "Garantindo existencia do bucket de estado no GCS..."
+          gcloud storage buckets create "gs://${{ env.GCP_PROJECT_ID }}-tfstate" \
+            --project="${{ env.GCP_PROJECT_ID }}" \
+            --location="${{ env.GCP_REGION }}" \
+            --uniform-bucket-level-access 2>/dev/null || true
+
+          gcloud storage buckets update "gs://${{ env.GCP_PROJECT_ID }}-tfstate" --versioning 2>/dev/null || true
+
+          echo "Inicializando Terraform com Backend GCS..."
+          terraform init \
+            -backend-config="bucket=${{ env.GCP_PROJECT_ID }}-tfstate" \
+            -backend-config="prefix=ufgpay/prod"
+
+      - name: Sincronizar Recursos Existentes no State
+        working-directory: infra
+        run: |
+          PROJECT="${{ env.GCP_PROJECT_ID }}"
+          REGION="${{ env.GCP_REGION }}"
+          TF_VARS="-var=project_id=$PROJECT -var=region=$REGION -var=zone=${{ env.GCP_ZONE }} -var=environment=prod -var=db_deletion_protection=false"
+
+          import_if_missing() {
+            local res="$1"
+            local id="$2"
+            if ! terraform state list 2>/dev/null | grep -q "^${res}$"; then
+              echo "Importando $res ($id)..."
+              terraform import $TF_VARS "$res" "$id" 2>/dev/null || true
+            else
+              echo "$res ja esta no state."
+            fi
+          }
+
+          # Rede e Subnets
+          import_if_missing "google_compute_network.vpc" "projects/$PROJECT/global/networks/ufgpay-prod-vpc"
+          import_if_missing "google_compute_subnetwork.subnet" "projects/$PROJECT/regions/$REGION/subnetworks/ufgpay-prod-subnet-$REGION"
+          import_if_missing "google_compute_router.router" "projects/$PROJECT/regions/$REGION/routers/ufgpay-prod-nat-router"
+          import_if_missing "google_compute_router_nat.nat" "projects/$PROJECT/regions/$REGION/routers/ufgpay-prod-nat-router/ufgpay-prod-nat-gateway"
+          import_if_missing "google_compute_global_address.private_ip_alloc" "projects/$PROJECT/global/addresses/ufgpay-prod-private-ip-alloc"
+          import_if_missing "google_compute_firewall.allow_internal" "projects/$PROJECT/global/firewalls/ufgpay-prod-allow-internal"
+          import_if_missing "google_compute_firewall.allow_health_checks" "projects/$PROJECT/global/firewalls/ufgpay-prod-allow-health-checks"
+
+          # Frontend CDN e Bucket
+          import_if_missing "google_storage_bucket.frontend" "ufgpay-prod-frontend-static-$PROJECT"
+          import_if_missing "google_compute_global_address.frontend_ip" "projects/$PROJECT/global/addresses/ufgpay-prod-frontend-global-ip"
+
+          # Artifact Registry
+          import_if_missing "google_artifact_registry_repository.docker_repo" "projects/$PROJECT/locations/$REGION/repositories/ufgpay-prod-docker-repo"
+
+          # Service Accounts
+          import_if_missing "google_service_account.gke_sa" "projects/$PROJECT/serviceAccounts/ufgpay-prod-gke-sa@$PROJECT.iam.gserviceaccount.com"
+          import_if_missing "google_service_account.app_sa" "projects/$PROJECT/serviceAccounts/ufgpay-prod-app-sa@$PROJECT.iam.gserviceaccount.com"
+
+          # Secrets
+          import_if_missing "google_secret_manager_secret.db_password" "projects/$PROJECT/secrets/ufgpay-prod-db-password"
+          import_if_missing "google_secret_manager_secret.jwt_secret" "projects/$PROJECT/secrets/ufgpay-prod-jwt-secret"
+
+          # Redis e GKE Cluster
+          import_if_missing "google_redis_instance.cache" "projects/$PROJECT/locations/$REGION/instances/ufgpay-prod-redis"
+          import_if_missing "google_container_cluster.primary" "projects/$PROJECT/locations/$REGION/clusters/ufgpay-prod-gke-cluster"
 
       - name: Terraform Apply
         working-directory: infra
